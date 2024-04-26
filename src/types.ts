@@ -30,7 +30,7 @@ export type Inputs = Record<string, NumberLike>;
 
 export type CircuitZKitConfig = {
   circuitFile: string;
-  globalOutDir: string;
+  artifactsDir: string;
   circuitOutDir: string;
   verifierOutDir: string;
 };
@@ -66,8 +66,7 @@ export type CircuitZKitPrivateConfig = {
 };
 
 export type CompileOptions = {
-  r1cs?: boolean;
-  wasm?: boolean;
   sym?: boolean;
   c?: boolean;
+  quiet?: boolean;
 };

@@ -4,15 +4,8 @@ import path from "path";
 
 import * as snarkjs from "snarkjs";
 import * as https from "https";
-import {
-  Calldata,
-  CircuitZKitConfig,
-  CircuitZKitPrivateConfig,
-  CompileOptions,
-  Groth16Proof,
-  Inputs,
-  ProofStruct,
-} from "./types";
+import { Calldata, CircuitZKitConfig, CircuitZKitPrivateConfig, CompileOptions, Inputs, ProofStruct } from "./types";
+import { createDirIfNotExists, ensureFileExists } from "./utils";
 
 const { CircomRunner, bindings, Context } = require("@distributedlab/circom2");
 
@@ -25,7 +18,7 @@ export class CircuitZKit<I extends Inputs> {
 
     this.config = {
       circuitFile: config.circuitFile,
-      artifactsDir: config.globalOutDir,
+      artifactsDir: config.artifactsDir,
       circuitOutDir: config.circuitOutDir,
       verifierOutDir: config.verifierOutDir,
       r1csFile: path.join(config.circuitOutDir, `${circuitId}.r1cs`),
@@ -33,7 +26,7 @@ export class CircuitZKit<I extends Inputs> {
       vKeyFile: path.join(config.circuitOutDir, `${circuitId}.vkey.json`),
       wasmFile: path.join(config.circuitOutDir, `${circuitId}_js`, `${circuitId}.wasm`),
       verifierFile: path.join(config.verifierOutDir, `${verifierId}.sol`),
-      ptauDir: path.join(config.globalOutDir, ".ptau"),
+      ptauDir: path.join(config.artifactsDir, ".ptau"),
       ptauFile: "",
       circuitId,
       verifierId,
@@ -42,11 +35,68 @@ export class CircuitZKit<I extends Inputs> {
     };
   }
 
-  private _getCompileArgs(options: CompileOptions): string[] {
-    let args = [this.config.circuitFile];
+  public async compile(options = {} as CompileOptions): Promise<void> {
+    createDirIfNotExists(this.config.circuitOutDir);
 
-    options.r1cs && args.push("--r1cs");
-    options.wasm && args.push("--wasm");
+    const args = this._getCompileArgs({
+      sym: options.sym ?? true,
+      c: options.c ?? false,
+    });
+
+    await this._compile(args, options.quiet ?? true);
+
+    await this._fetchPtauFile();
+    await this._generateZKey();
+    await this._generateVKey();
+  }
+
+  public async generateProof(inputs: I): Promise<ProofStruct> {
+    ensureFileExists(this.config.zKeyFile);
+    ensureFileExists(this.config.wasmFile);
+
+    return (await snarkjs.groth16.fullProve(inputs, this.config.wasmFile, this.config.zKeyFile)) as ProofStruct;
+  }
+
+  public async verifyProof(proof: ProofStruct): Promise<boolean> {
+    ensureFileExists(this.config.vKeyFile);
+
+    const verifier = JSON.parse(fs.readFileSync(this.config.vKeyFile).toString());
+
+    return await snarkjs.groth16.verify(verifier, proof.publicSignals, proof.proof);
+  }
+
+  public async createVerifier(): Promise<void> {
+    createDirIfNotExists(this.config.verifierOutDir);
+    ensureFileExists(this.config.zKeyFile);
+
+    let verifierCode = await snarkjs.zKey.exportSolidityVerifier(this.config.zKeyFile, {
+      groth16: this.config.groth16Template,
+    });
+
+    verifierCode = verifierCode.replace("contract Verifier", `contract ${this.config.verifierId}`);
+
+    fs.writeFileSync(this.config.verifierFile, verifierCode, "utf-8");
+  }
+
+  public async generateCalldata(proof: ProofStruct): Promise<Calldata> {
+    const calldata = await snarkjs.groth16.exportSolidityCallData(proof.proof, proof.publicSignals);
+
+    return JSON.parse(`[${calldata}]`) as Calldata;
+  }
+
+  private async _generateZKey(): Promise<void> {
+    await snarkjs.zKey.newZKey(this.config.r1csFile, this.config.ptauFile, this.config.zKeyFile);
+  }
+
+  private async _generateVKey(): Promise<void> {
+    const vKeyData = await snarkjs.zKey.exportVerificationKey(this.config.zKeyFile);
+
+    fs.writeFileSync(this.config.vKeyFile, JSON.stringify(vKeyData));
+  }
+
+  private _getCompileArgs(options: CompileOptions): string[] {
+    let args = [this.config.circuitFile, "--r1cs", "--wasm"];
+
     options.sym && args.push("--sym");
     options.c && args.push("--c");
 
@@ -55,38 +105,32 @@ export class CircuitZKit<I extends Inputs> {
     return args;
   }
 
-  private _ensureDirExists(dirPath: string): void {
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
+  private async _compile(args: string[], quiet: boolean): Promise<void> {
+    try {
+      await this._getCircomRunner(args, quiet).execute(this.config.wasmBytes);
+    } catch {
+      if (quiet) {
+        throw new Error(
+          'Compilation failed with an unknown error. Consider pass "quiet=false" flag to see the compilation error.',
+        );
+      }
+
+      throw new Error("Compilation failed.");
     }
   }
 
-  private _ensureFileExists(filePath: string) {
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`Expected the file "${filePath}" to exist`);
+  private async _fetchPtauFile(): Promise<void> {
+    const exists = await this._updatePtauFile();
+
+    if (!exists) {
+      await this._downloadPtauFile();
     }
-  }
-
-  private async getR1CSInfo(): Promise<snarkjs.R1CSInfoType> {
-    return await snarkjs.r1cs.info(this.config.r1csFile);
-  }
-
-  public async getTotalConstraints(): Promise<number> {
-    const r1csInfo = await this.getR1CSInfo();
-
-    return r1csInfo.nConstraints;
-  }
-
-  public async getPtauLog2(): Promise<number> {
-    const totalConstraints = await this.getTotalConstraints();
-
-    return Math.max(10, Math.ceil(Math.log2(totalConstraints)));
   }
 
   private async _updatePtauFile(): Promise<boolean> {
-    this._ensureDirExists(this.config.ptauDir);
+    createDirIfNotExists(this.config.ptauDir);
 
-    const ptauLog2 = await this.getPtauLog2();
+    const totalConstraintsLog2 = await this._getTotalConstraintsLog2();
 
     const entries = fs.readdirSync(this.config.ptauDir, { withFileTypes: true });
 
@@ -103,31 +147,14 @@ export class CircuitZKit<I extends Inputs> {
 
       const entryConstraintsLog2 = parseInt(match[1]);
 
-      return ptauLog2 <= entryConstraintsLog2;
+      return totalConstraintsLog2 <= entryConstraintsLog2;
     });
 
     this.config.ptauFile = entry
       ? path.join(this.config.ptauDir, entry.name)
-      : path.join(this.config.ptauDir, `powers-of-tau-${ptauLog2}.ptau`);
+      : path.join(this.config.ptauDir, `powers-of-tau-${totalConstraintsLog2}.ptau`);
 
     return !!entry;
-  }
-
-  private async _getPtauFileUrl(): Promise<string> {
-    const totalConstraints = await this.getTotalConstraints();
-    const ptauLog2 = await this.getPtauLog2();
-
-    if (ptauLog2 <= 27) {
-      return `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_${ptauLog2}.ptau`;
-    }
-
-    if (ptauLog2 == 28) {
-      return `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final.ptau`;
-    }
-
-    throw new Error(
-      `Cannot find ptau file. Circuit has ${totalConstraints} constraints while the maximum number is 2^28`,
-    );
   }
 
   private async _downloadPtauFile(): Promise<boolean> {
@@ -153,96 +180,36 @@ export class CircuitZKit<I extends Inputs> {
     });
   }
 
-  private async _fetchPtauFile(): Promise<void> {
-    const exists = await this._updatePtauFile();
+  private async _getPtauFileUrl(): Promise<string> {
+    const totalConstraints = await this._getTotalConstraints();
+    const totalConstraintsLog2 = await this._getTotalConstraintsLog2();
 
-    if (!exists) {
-      await this._downloadPtauFile();
-    }
-  }
-
-  public async generateZKey(): Promise<void> {
-    const { r1csFile, ptauFile, zKeyFile } = this.config;
-
-    this._ensureFileExists(r1csFile);
-    this._ensureFileExists(ptauFile);
-
-    await snarkjs.zKey.newZKey(r1csFile, ptauFile, zKeyFile);
-  }
-
-  public async generateVKey(): Promise<void> {
-    const { zKeyFile, vKeyFile } = this.config;
-
-    this._ensureFileExists(zKeyFile);
-
-    const vKeyData = await snarkjs.zKey.exportVerificationKey(zKeyFile);
-
-    fs.writeFileSync(vKeyFile, JSON.stringify(vKeyData));
-  }
-
-  public async compile(options = {} as CompileOptions): Promise<void> {
-    this._ensureDirExists(this.config.circuitOutDir);
-
-    const args = this._getCompileArgs({
-      r1cs: options.r1cs ?? true,
-      wasm: options.wasm ?? true,
-      sym: options.sym ?? true,
-      c: options.c ?? false,
-    });
-
-    try {
-      await this._getCircomRunner(args, true).execute(this.config.wasmBytes);
-    } catch (err) {
-      throw new Error("Compilation error", { cause: err });
+    if (totalConstraintsLog2 <= 27) {
+      return `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_${totalConstraintsLog2}.ptau`;
     }
 
-    await this._fetchPtauFile();
-    await this.generateZKey();
-    await this.generateVKey();
+    if (totalConstraintsLog2 == 28) {
+      return `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final.ptau`;
+    }
+
+    throw new Error(
+      `Cannot find ptau file. Circuit has ${totalConstraints} constraints while the maximum number is 2^28`,
+    );
   }
 
-  async createVerifier(): Promise<void> {
-    this._ensureFileExists(this.config.zKeyFile);
-    this._ensureDirExists(this.config.verifierOutDir);
+  private async _getTotalConstraints(): Promise<number> {
+    const r1csInfo = await snarkjs.r1cs.info(this.config.r1csFile);
 
-    let verifierCode = await snarkjs.zKey.exportSolidityVerifier(this.config.zKeyFile, {
-      groth16: this.config.groth16Template,
-    });
-
-    verifierCode = verifierCode.replace("contract Verifier", `contract ${this.config.verifierId}`);
-
-    fs.writeFileSync(this.config.verifierFile, verifierCode, "utf-8");
+    return r1csInfo.nConstraints;
   }
 
-  public async generateProof(inputs: I): Promise<ProofStruct> {
-    const { zKeyFile, wasmFile } = this.config;
+  private async _getTotalConstraintsLog2(): Promise<number> {
+    const totalConstraints = await this._getTotalConstraints();
 
-    this._ensureFileExists(zKeyFile);
-    this._ensureFileExists(wasmFile);
-
-    const proof = await snarkjs.groth16.fullProve(inputs, wasmFile, zKeyFile);
-
-    return {
-      proof: proof.proof as Groth16Proof,
-      publicSignals: proof.publicSignals,
-    };
+    return Math.max(10, Math.ceil(Math.log2(totalConstraints)));
   }
 
-  public async verifyProof(proof: ProofStruct): Promise<boolean> {
-    this._ensureFileExists(this.config.vKeyFile);
-
-    const verifier = JSON.parse(fs.readFileSync(this.config.vKeyFile).toString());
-
-    return await snarkjs.groth16.verify(verifier, proof.publicSignals, proof.proof);
-  }
-
-  public async generateCalldata(proof: ProofStruct): Promise<Calldata> {
-    const calldata = await snarkjs.groth16.exportSolidityCallData(proof.proof, proof.publicSignals);
-
-    return JSON.parse(`[${calldata}]`) as Calldata;
-  }
-
-  private _getCircomRunner(args: string[], quiet: boolean = false): typeof CircomRunner {
+  private _getCircomRunner(args: string[], quiet: boolean): typeof CircomRunner {
     return new CircomRunner({
       args,
       preopens: { "/": "/" },

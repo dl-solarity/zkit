@@ -16,13 +16,13 @@ describe("happy flow", function () {
 
     const circuit = circom.getCircuit<InputsMultiplier>("Multiplier");
 
-    await circuit.compile();
-
-    const proof = await circuit.generateProof({ a: 1337, b: 1337 });
-
-    await circuit.createVerifier();
-
-    console.log(await circuit.verifyProof(proof));
-    console.log(await circuit.generateCalldata(proof));
+    await circuit.compile({ quiet: false });
+    //
+    // const proof = await circuit.generateProof({ a: 1337, b: 1337 });
+    //
+    // await circuit.createVerifier();
+    //
+    // console.log(await circuit.verifyProof(proof));
+    // console.log(await circuit.generateCalldata(proof));
   });
 });

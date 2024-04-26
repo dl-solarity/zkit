@@ -4,6 +4,7 @@ import process from "process";
 import os from "os";
 import { CircomZKitConfig, CircomZKitPrivateConfig, Inputs } from "./types";
 import fs from "fs";
+import { ensureDirExists } from "./utils";
 
 export class CircomZKit {
   public static readonly DEFAULT_CIRCUITS_DIR = "circuits";
@@ -30,7 +31,7 @@ export class CircomZKit {
         return file == path.relative(this.config.circuitsDir, path.join(this.config.circuitsDir, circuit));
       }
 
-      return path.parse(file).base == `${circuit}.circom`;
+      return path.basename(file) == `${circuit}.circom`;
     });
 
     if (candidates.length == 0) {
@@ -54,7 +55,7 @@ export class CircomZKit {
       circuitFile,
       circuitOutDir,
       verifierOutDir,
-      globalOutDir: this.config.artifactsDir,
+      artifactsDir: this.config.artifactsDir,
     });
   }
 
@@ -81,6 +82,8 @@ export class CircomZKit {
   }
 
   private _getAllCircuits(): string[] {
+    ensureDirExists(this.config.circuitsDir);
+
     let circuits = [] as string[];
 
     const getAllCircuits = (dir: string) => {
@@ -94,7 +97,7 @@ export class CircomZKit {
           getAllCircuits(entryPath);
         }
 
-        if (entry.isFile() && path.parse(entry.name).ext == ".circom") {
+        if (entry.isFile() && path.extname(entry.name) == ".circom") {
           circuits.push(path.relative(this.config.circuitsDir, entryPath));
         }
       }
