@@ -73,7 +73,7 @@ export class CircuitZKit<I extends Inputs> {
       groth16: this.config.groth16Template,
     });
 
-    verifierCode = verifierCode.replace("contract Verifier", `contract ${this.config.verifierId}`);
+    verifierCode = verifierCode.replace("contract Groth16Verifier", `contract ${this.config.verifierId}`);
 
     fs.writeFileSync(this.config.verifierFile, verifierCode, "utf-8");
   }
