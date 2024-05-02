@@ -69,8 +69,13 @@ export class ManagerZKit {
     return path.join(this._config.artifacts, uuid());
   }
 
-  public getTemplate(template: TemplateType): string {
-    return this._config.templates[template];
+  public getTemplate(templateType: TemplateType): string {
+    switch (templateType) {
+      case "groth16":
+        return this._config.templates.groth16;
+      default:
+        throw new Error(`Ambiguous template type: ${templateType}.`);
+    }
   }
 
   private _searchPtau(ptauId: number): PtauInfo {
