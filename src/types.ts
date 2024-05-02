@@ -25,48 +25,42 @@ export type ProofStruct = {
 };
 
 export type NumberLike = number | bigint | string;
+export type ArrayLike = NumberLike[] | ArrayLike[];
+export type InputLike = NumberLike | ArrayLike;
 
-export type Inputs = Record<string, NumberLike>;
+export type Inputs = Record<string, InputLike>;
 
-export type CircuitZKitConfig = {
-  circuitFile: string;
-  artifactsDir: string;
-  circuitOutDir: string;
-  verifierOutDir: string;
+export type ManagerZKitConfig = {
+  circuits: string;
+  artifacts: string;
+  verifiers: string;
+  ptau: string;
 };
 
-export type CircomZKitConfig = {
-  circuitsDir?: string;
-  artifactsDir?: string;
-  verifiersDir?: string;
-};
-
-export type CircomZKitPrivateConfig = {
-  circuitsDir: string;
-  artifactsDir: string;
-  verifiersDir: string;
-};
-
-export type CircuitZKitPrivateConfig = {
-  circuitFile: string;
-  artifactsDir: string;
-  circuitOutDir: string;
-  verifierOutDir: string;
-  r1csFile: string;
-  zKeyFile: string;
-  vKeyFile: string;
-  wasmFile: string;
-  verifierFile: string;
-  ptauFile: string;
-  ptauDir: string;
-  circuitId: string;
-  verifierId: string;
-  wasmBytes: typeof Context;
-  groth16Template: string;
+export type ManagerZKitPrivateConfig = ManagerZKitConfig & {
+  compiler: typeof Context;
+  templates: {
+    groth16: string;
+  };
 };
 
 export type CompileOptions = {
-  sym?: boolean;
-  c?: boolean;
-  quiet?: boolean;
+  sym: boolean;
+  json: boolean;
+  c: boolean;
+  quiet: boolean;
 };
+
+export type CircuitInfo = {
+  path: string;
+  id: string | null;
+};
+
+export type PtauInfo = {
+  file: string;
+  url: string | null;
+};
+
+export type FileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm" | "sol";
+export type DirType = "circuit" | "artifact" | "verifier";
+export type TemplateType = "groth16";
