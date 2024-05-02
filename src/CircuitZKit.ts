@@ -17,9 +17,10 @@ export class CircuitZKit {
 
   public async compile(options: Partial<CompileOptions> = defaultCompileOptions): Promise<void> {
     const tempDir = this._manager.getTempDir();
-    const artifactDir = this._getDir("artifact");
 
     try {
+      const artifactDir = this._getDir("artifact");
+
       fs.mkdirSync(tempDir, { recursive: true });
 
       const overriddenOptions: CompileOptions = {
@@ -32,7 +33,7 @@ export class CircuitZKit {
       await this._generateZKey(tempDir);
       await this._generateVKey(tempDir);
 
-      this._moveFromTempDirToOut(tempDir, artifactDir);
+      this._moveFromTempDirToOutDir(tempDir, artifactDir);
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
@@ -40,9 +41,10 @@ export class CircuitZKit {
 
   public async createVerifier(): Promise<void> {
     const tempDir = this._manager.getTempDir();
-    const verifierDir = this._getDir("verifier");
 
     try {
+      const verifierDir = this._getDir("verifier");
+
       fs.mkdirSync(tempDir, { recursive: true });
 
       const vKeyFile = this._mustGetFile("vkey");
@@ -57,7 +59,7 @@ export class CircuitZKit {
 
       fs.writeFileSync(verifierFile, verifierCode, "utf-8");
 
-      this._moveFromTempDirToOut(tempDir, verifierDir);
+      this._moveFromTempDirToOutDir(tempDir, verifierDir);
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
@@ -223,7 +225,7 @@ export class CircuitZKit {
     return file;
   }
 
-  private _moveFromTempDirToOut(tempDir: string, outDir: string) {
+  private _moveFromTempDirToOutDir(tempDir: string, outDir: string) {
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.mkdirSync(outDir, { recursive: true });
 

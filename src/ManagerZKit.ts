@@ -13,7 +13,7 @@ export class ManagerZKit {
   constructor(config: Partial<ManagerZKitConfig>) {
     const projectRoot = process.cwd();
 
-    const ptau = config.ptau ? path.join(projectRoot, config.ptau) : path.join(os.tmpdir(), ".ptau");
+    const ptau = config.ptau ? path.join(projectRoot, config.ptau) : path.join(os.tmpdir(), ".zkit/.ptau");
 
     this._config = {
       circuits: path.join(projectRoot, config.circuits ?? "circuits"),
