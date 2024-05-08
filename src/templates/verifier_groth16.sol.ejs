@@ -48,10 +48,10 @@ contract <%=verifier_id%> {
     uint16 public constant P_LAST_MEM = 896;
 
     function verifyProof(
-        uint[2] calldata pA_,
-        uint[2][2] calldata pB_,
-        uint[2] calldata pC_,
-        uint[1] calldata pubSignals_
+        uint256[2] calldata pA_,
+        uint256[2][2] calldata pB_,
+        uint256[2] calldata pC_,
+        uint256[<%=IC.length-1%>] calldata pubSignals_
     ) public view returns (bool) {
         assembly {
             function checkField(v) {
@@ -65,6 +65,7 @@ contract <%=verifier_id%> {
             function g1MulAccC(pR, x, y, s) {
                 let success
                 let mIn := mload(0x40)
+
                 mstore(mIn, x)
                 mstore(add(mIn, 32), y)
                 mstore(add(mIn, 64), s)
