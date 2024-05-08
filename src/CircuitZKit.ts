@@ -119,7 +119,6 @@ export class CircuitZKit {
     options.sym && args.push("--sym");
     options.json && args.push("--json");
     options.c && args.push("--c");
-    !options.quiet && args.push("--verbose");
 
     args.push("-o", outDir);
 
