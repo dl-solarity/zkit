@@ -34,10 +34,18 @@ export type ManagerZKitConfig = {
   circuits: string;
   artifacts: string;
   verifiers: string;
-  ptau: string;
+  ptauFile: string;
 };
 
-export type ManagerZKitPrivateConfig = ManagerZKitConfig & {
+export type ManagerZKitPrivateConfig = {
+  circuits: string;
+  artifacts: string;
+  verifiers: string;
+  tempDir: string;
+  ptau: {
+    isGlobal: boolean;
+    path: string;
+  };
   compiler: typeof Context;
   templates: {
     groth16: string;
@@ -54,11 +62,6 @@ export type CompileOptions = {
 export type CircuitInfo = {
   path: string;
   id: string | null;
-};
-
-export type PtauInfo = {
-  file: string;
-  url: string | null;
 };
 
 export type FileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm" | "sol";

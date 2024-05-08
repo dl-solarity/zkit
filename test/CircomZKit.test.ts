@@ -23,5 +23,5 @@ describe("happy flow", function () {
 
     console.log(await circuit.verifyProof(proof));
     console.log(await circuit.generateCalldata(proof));
-  });
+  }, 20000);
 });

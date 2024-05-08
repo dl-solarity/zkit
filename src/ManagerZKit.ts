@@ -3,9 +3,10 @@ import https from "https";
 import os from "os";
 import path from "path";
 import process from "process";
+import * as readline from "readline";
 import { v4 as uuid } from "uuid";
 
-import { ManagerZKitConfig, ManagerZKitPrivateConfig, PtauInfo, TemplateType } from "./types";
+import { ManagerZKitConfig, ManagerZKitPrivateConfig, TemplateType } from "./types";
 
 export class ManagerZKit {
   private _config: ManagerZKitPrivateConfig;
@@ -13,13 +14,25 @@ export class ManagerZKit {
   constructor(config: Partial<ManagerZKitConfig>) {
     const projectRoot = process.cwd();
 
-    const ptau = config.ptau ? path.join(projectRoot, config.ptau) : path.join(os.tmpdir(), ".zkit/.ptau");
+    const isGlobalPtau = !config.ptauFile;
+
+    const tempDir = path.join(os.homedir(), ".zkit");
+
+    const ptauPath = isGlobalPtau ? path.join(tempDir, ".ptau") : path.join(projectRoot, config.ptauFile!);
+
+    if (!isGlobalPtau && path.extname(ptauPath) != ".ptau") {
+      throw new Error('Ptau file must have ".ptau" extension.');
+    }
 
     this._config = {
       circuits: path.join(projectRoot, config.circuits ?? "circuits"),
       artifacts: path.join(projectRoot, config.artifacts ?? "zkit-artifacts"),
       verifiers: path.join(projectRoot, config.verifiers ?? "contracts/verifiers"),
-      ptau,
+      tempDir,
+      ptau: {
+        isGlobal: isGlobalPtau,
+        path: ptauPath,
+      },
       compiler: fs.readFileSync(require.resolve("@distributedlab/circom2/circom.wasm")),
       templates: {
         groth16: fs.readFileSync(path.join(__dirname, "templates", "verifier_groth16.sol.ejs"), "utf8"),
@@ -27,22 +40,12 @@ export class ManagerZKit {
     };
   }
 
-  public async fetchPtauInfo(constraints: number): Promise<PtauInfo> {
-    const ptauId = Math.max(10, Math.ceil(Math.log2(constraints)));
-
-    if (ptauId > 20) {
-      throw new Error("Circuit has too many constraints. The maximum number of constraints is 2^20.");
+  public async fetchPtauFile(minConstraints: number): Promise<string> {
+    if (this._config.ptau.isGlobal) {
+      return await this._fetchGlobalPtau(minConstraints);
     }
 
-    fs.mkdirSync(this._config.ptau, { recursive: true });
-
-    const ptauInfo = this._searchPtau(ptauId);
-
-    if (ptauInfo.url) {
-      await this._downloadPtau(ptauInfo);
-    }
-
-    return ptauInfo;
+    return this._fetchLocalPtau();
   }
 
   public getArtifactsDir(): string {
@@ -57,8 +60,8 @@ export class ManagerZKit {
     return this._config.verifiers;
   }
 
-  public getPtauDir(): string {
-    return this._config.ptau;
+  public getPtauPath(): string {
+    return this._config.ptau.path;
   }
 
   public getCompiler(): string {
@@ -66,7 +69,7 @@ export class ManagerZKit {
   }
 
   public getTempDir(): string {
-    return path.join(this._config.artifacts, uuid());
+    return path.join(os.homedir(), ".zkit", uuid());
   }
 
   public getTemplate(templateType: TemplateType): string {
@@ -78,8 +81,44 @@ export class ManagerZKit {
     }
   }
 
-  private _searchPtau(ptauId: number): PtauInfo {
-    const entries = fs.readdirSync(this._config.ptau, { withFileTypes: true });
+  private async _fetchGlobalPtau(minConstraints: number): Promise<string> {
+    const ptauId = Math.max(Math.ceil(Math.log2(minConstraints)), 8);
+
+    if (ptauId > 20) {
+      throw new Error(
+        'Circuit has too many constraints. The maximum number of constraints is 2^20. Consider passing "ptau=PATH_TO_FILE".',
+      );
+    }
+
+    const ptauInfo = this._searchGlobalPtau(ptauId);
+
+    if (ptauInfo.url) {
+      if (!(await this._askForDownloadAllowance(ptauInfo.url))) {
+        throw new Error('Download is cancelled. Allow download or consider passing "ptauFile=PATH_TO_FILE"');
+      }
+
+      fs.mkdirSync(this._config.ptau.path, { recursive: true });
+
+      await this._downloadPtau(ptauInfo.file, ptauInfo.url);
+    }
+
+    return ptauInfo.file;
+  }
+
+  private _fetchLocalPtau(): string {
+    if (!fs.existsSync(this._config.ptau.path)) {
+      throw new Error(`Ptau file "${this._config.ptau.path}" doesn't exist.`);
+    }
+
+    return this._config.ptau.path;
+  }
+
+  private _searchGlobalPtau(ptauId: number): { file: string; url: string | null } {
+    let entries = [] as fs.Dirent[];
+
+    if (fs.existsSync(this._config.ptau.path)) {
+      entries = fs.readdirSync(this._config.ptau.path, { withFileTypes: true });
+    }
 
     const entry = entries.find((entry) => {
       if (!entry.isFile()) {
@@ -97,31 +136,55 @@ export class ManagerZKit {
       return ptauId <= entryPtauId;
     });
 
-    const file = path.join(this._config.ptau, entry ? entry.name : `powers-of-tau-${ptauId}.ptau`);
-    const url = entry ? null : `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_${ptauId}.ptau`;
+    const file = path.join(this._config.ptau.path, entry ? entry.name : `powers-of-tau-${ptauId}.ptau`);
+    const url = (() => {
+      if (entry) {
+        return null;
+      }
+
+      if (ptauId < 10) {
+        return `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_0${ptauId}.ptau`;
+      }
+
+      return `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_${ptauId}.ptau`;
+    })();
 
     return { file, url };
   }
 
-  private async _downloadPtau(ptauInfo: PtauInfo): Promise<boolean> {
-    const ptauFileStream = fs.createWriteStream(ptauInfo.file);
+  private async _downloadPtau(file: string, url: string): Promise<boolean> {
+    const ptauFileStream = fs.createWriteStream(file);
 
     return new Promise((resolve, reject) => {
-      const request = https.get(ptauInfo.url!, (response) => {
+      const request = https.get(url, (response) => {
         response.pipe(ptauFileStream);
       });
 
       ptauFileStream.on("finish", () => resolve(true));
 
       request.on("error", (err) => {
-        fs.unlink(ptauInfo.file, () => reject(err));
+        fs.unlink(file, () => reject(err));
       });
 
       ptauFileStream.on("error", (err) => {
-        fs.unlink(ptauInfo.file, () => reject(err));
+        fs.unlink(file, () => reject(err));
       });
 
       request.end();
     });
+  }
+
+  private _askForDownloadAllowance(url: string): Promise<boolean> {
+    const readLine = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    return new Promise((resolve) =>
+      readLine.question(`No ptau found. Press [Y] to download it from "${url}": `, (response) => {
+        readLine.close();
+        resolve(response.toUpperCase() == "Y");
+      }),
+    );
   }
 }

@@ -99,9 +99,9 @@ export class CircuitZKit {
     const zKeyFile = this._getFile("zkey", outDir);
 
     const constraints = await this._getConstraints(outDir);
-    const ptauInfo = await this._manager.fetchPtauInfo(constraints);
+    const ptauFile = await this._manager.fetchPtauFile(constraints);
 
-    await snarkjs.zKey.newZKey(r1csFile, ptauInfo.file, zKeyFile);
+    await snarkjs.zKey.newZKey(r1csFile, ptauFile, zKeyFile);
   }
 
   private async _generateVKey(outDir: string): Promise<void> {
