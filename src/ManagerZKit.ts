@@ -176,16 +176,16 @@ export class ManagerZKit {
   }
 
   private _askForDownloadAllowance(url: string): Promise<boolean> {
-    const readLine = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    return new Promise((resolve) => {
+      const readLine = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
 
-    return new Promise((resolve) =>
       readLine.question(`No ptau found. Press [Y] to download it from "${url}": `, (response) => {
         readLine.close();
         resolve(response.toUpperCase() == "Y");
-      }),
-    );
+      });
+    });
   }
 }
