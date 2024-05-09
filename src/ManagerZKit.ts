@@ -7,28 +7,34 @@ import * as readline from "readline";
 import { v4 as uuid } from "uuid";
 
 import { ManagerZKitConfig, ManagerZKitPrivateConfig, TemplateType } from "./types";
+import { defaultManagerOptions } from "./defaults";
 
 export class ManagerZKit {
   private _config: ManagerZKitPrivateConfig;
 
-  constructor(config: Partial<ManagerZKitConfig>) {
+  constructor(config: Partial<ManagerZKitConfig> = defaultManagerOptions) {
+    const overriddenConfig = {
+      ...defaultManagerOptions,
+      ...config,
+    } as ManagerZKitConfig;
+
     const projectRoot = process.cwd();
 
-    const isGlobalPtau = !config.ptauFile;
+    const isGlobalPtau = !overriddenConfig.ptauFile;
 
-    if (!isGlobalPtau && path.extname(config.ptauFile!) != ".ptau") {
+    if (!isGlobalPtau && path.extname(overriddenConfig.ptauFile!) != ".ptau") {
       throw new Error('Ptau file must have ".ptau" extension.');
     }
 
     const tempDir = path.join(os.tmpdir(), ".zkit");
     const ptauPath = isGlobalPtau
       ? path.join(os.homedir(), ".zkit", ".ptau")
-      : path.join(projectRoot, config.ptauFile!);
+      : path.join(projectRoot, overriddenConfig.ptauFile!);
 
     this._config = {
-      circuitsDir: path.join(projectRoot, config.circuitsDir ?? "circuits"),
-      artifactsDir: path.join(projectRoot, config.artifactsDir ?? "zkit-artifacts"),
-      verifiersDir: path.join(projectRoot, config.verifiersDir ?? "contracts/verifiers"),
+      circuitsDir: path.join(projectRoot, overriddenConfig.circuitsDir),
+      artifactsDir: path.join(projectRoot, overriddenConfig.artifactsDir),
+      verifiersDir: path.join(projectRoot, overriddenConfig.verifiersDir),
       tempDir,
       ptau: {
         isGlobal: isGlobalPtau,

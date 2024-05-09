@@ -7,7 +7,11 @@ import { CircuitInfo } from "./types";
 import { readDirRecursively } from "./utils";
 
 export class CircomZKit {
-  constructor(private readonly _manager: ManagerZKit) {}
+  private readonly _manager: ManagerZKit;
+
+  constructor(manager?: ManagerZKit) {
+    this._manager = manager ?? new ManagerZKit();
+  }
 
   public getCircuit(circuit: string): CircuitZKit {
     const circuits = this._getAllCircuits();
