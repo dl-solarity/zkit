@@ -1,5 +1,15 @@
-import { CircomZKit } from "../src";
-import { ManagerZKit } from "../src/ManagerZKit";
+import { CircomZKit, ManagerZKit } from "../src";
+
+jest.mock("readline", () => ({
+  createInterface: jest.fn().mockReturnValue({
+    question: jest
+        .fn()
+        .mockImplementation((_query: string, cb: (answer: string) => void) => {
+          cb("Y");
+        }),
+    close: jest.fn().mockImplementation(() => undefined),
+  }),
+}));
 
 describe("happy flow", function () {
   test("happy flow", async () => {
@@ -23,5 +33,5 @@ describe("happy flow", function () {
 
     console.log(await circuit.verifyProof(proof));
     console.log(await circuit.generateCalldata(proof));
-  }, 20000);
+  });
 });
