@@ -25,7 +25,7 @@
   "scripts": {
     "prepare": "husky",
     "build": "tsc",
-    "test": "jest",
+    "test": "jest --forceExit",
     "lint-fix": "prettier --write 'src/**/*.ts'",
     "publish-to-npm": "npm run build && rm -rf dist/templates && cp -rf src/templates dist/templates && npm publish ./ --access public"
   },
