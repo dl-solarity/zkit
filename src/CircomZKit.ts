@@ -5,6 +5,8 @@ import path from "path";
 import { CircuitZKit } from "./CircuitZKit";
 import { ManagerZKit } from "./ManagerZKit";
 import { CircuitInfo } from "./types";
+import { readDirRecursively } from "./utils";
+import { resolveInclude } from "ejs";
 
 export class CircomZKit {
   constructor(private readonly _manager: ManagerZKit) {}
@@ -66,28 +68,11 @@ export class CircomZKit {
 
     let circuits = [] as string[];
 
-    const getAllCircuits = (dir: string) => {
-      if (!fs.existsSync(dir)) {
-        return;
+    readDirRecursively(circuitsDir, (dir: string, file: string) => {
+      if (path.extname(file) == ".circom") {
+        circuits.push(path.relative(circuitsDir, file));
       }
-
-      /// @dev After NodeJS v20 `recursive` flag can be passed
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const entryPath = path.join(dir, entry.name);
-
-        if (entry.isDirectory()) {
-          getAllCircuits(entryPath);
-        }
-
-        if (entry.isFile() && path.extname(entry.name) == ".circom") {
-          circuits.push(path.relative(this._manager.getCircuitsDir(), entryPath));
-        }
-      }
-    };
-
-    getAllCircuits(circuitsDir);
+    });
 
     return circuits;
   }

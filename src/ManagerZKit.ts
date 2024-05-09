@@ -16,18 +16,19 @@ export class ManagerZKit {
 
     const isGlobalPtau = !config.ptauFile;
 
-    const tempDir = path.join(os.homedir(), ".zkit");
-
-    const ptauPath = isGlobalPtau ? path.join(tempDir, ".ptau") : path.join(projectRoot, config.ptauFile!);
-
-    if (!isGlobalPtau && path.extname(ptauPath) != ".ptau") {
+    if (!isGlobalPtau && path.extname(config.ptauFile!) != ".ptau") {
       throw new Error('Ptau file must have ".ptau" extension.');
     }
 
+    const tempDir = path.join(os.tmpdir(), ".zkit");
+    const ptauPath = isGlobalPtau
+      ? path.join(os.homedir(), ".zkit", ".ptau")
+      : path.join(projectRoot, config.ptauFile!);
+
     this._config = {
-      circuits: path.join(projectRoot, config.circuits ?? "circuits"),
-      artifacts: path.join(projectRoot, config.artifacts ?? "zkit-artifacts"),
-      verifiers: path.join(projectRoot, config.verifiers ?? "contracts/verifiers"),
+      circuitsDir: path.join(projectRoot, config.circuits ?? "circuits"),
+      artifactsDir: path.join(projectRoot, config.artifacts ?? "zkit-artifacts"),
+      verifiersDir: path.join(projectRoot, config.verifiers ?? "contracts/verifiers"),
       tempDir,
       ptau: {
         isGlobal: isGlobalPtau,
@@ -49,15 +50,15 @@ export class ManagerZKit {
   }
 
   public getArtifactsDir(): string {
-    return this._config.artifacts;
+    return this._config.artifactsDir;
   }
 
   public getCircuitsDir(): string {
-    return this._config.circuits;
+    return this._config.circuitsDir;
   }
 
   public getVerifiersDir(): string {
-    return this._config.verifiers;
+    return this._config.verifiersDir;
   }
 
   public getPtauPath(): string {
@@ -69,7 +70,7 @@ export class ManagerZKit {
   }
 
   public getTempDir(): string {
-    return path.join(os.homedir(), ".zkit", uuid());
+    return path.join(this._config.tempDir, uuid());
   }
 
   public getTemplate(templateType: TemplateType): string {

@@ -6,6 +6,7 @@ import * as snarkjs from "snarkjs";
 import { defaultCompileOptions } from "./defaults";
 import { ManagerZKit } from "./ManagerZKit";
 import { Calldata, CompileOptions, DirType, FileType, Inputs, ProofStruct } from "./types";
+import { readDirRecursively } from "./utils";
 
 const { CircomRunner, bindings } = require("@distributedlab/circom2");
 
@@ -228,11 +229,15 @@ export class CircuitZKit {
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.mkdirSync(outDir, { recursive: true });
 
-    fs.readdirSync(tempDir).forEach((entry) => {
-      const sourcePath = path.join(tempDir, entry);
-      const destPath = path.join(outDir, entry);
+    readDirRecursively(tempDir, (dir: string, file: string) => {
+      const correspondingOutDir = path.join(outDir, path.relative(tempDir, dir));
+      const correspondingOutFile = path.join(outDir, path.relative(tempDir, file));
 
-      fs.renameSync(sourcePath, destPath);
+      if (!fs.existsSync(correspondingOutDir)) {
+        fs.mkdirSync(correspondingOutDir);
+      }
+
+      fs.copyFileSync(file, correspondingOutFile);
     });
   }
 

@@ -38,9 +38,9 @@ export type ManagerZKitConfig = {
 };
 
 export type ManagerZKitPrivateConfig = {
-  circuits: string;
-  artifacts: string;
-  verifiers: string;
+  circuitsDir: string;
+  artifactsDir: string;
+  verifiersDir: string;
   tempDir: string;
   ptau: {
     isGlobal: boolean;

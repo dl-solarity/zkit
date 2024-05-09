@@ -16,7 +16,7 @@ describe("happy flow", function () {
     const manager = new ManagerZKit({
       circuits: "test/circuits",
       artifacts: "test/zkit-artifacts",
-      verifiers: "test/verifiers",
+      verifiers: "test/verifiers"
     });
 
     const circom = new CircomZKit(manager);
