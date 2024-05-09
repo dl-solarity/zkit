@@ -14,9 +14,9 @@ jest.mock("readline", () => ({
 describe("happy flow", function () {
   test("happy flow", async () => {
     const manager = new ManagerZKit({
-      circuits: "test/circuits",
-      artifacts: "test/zkit-artifacts",
-      verifiers: "test/verifiers"
+      circuitsDir: "test/circuits",
+      artifactsDir: "test/zkit-artifacts",
+      verifiersDir: "test/verifiers"
     });
 
     const circom = new CircomZKit(manager);

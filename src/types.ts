@@ -31,9 +31,9 @@ export type InputLike = NumberLike | ArrayLike;
 export type Inputs = Record<string, InputLike>;
 
 export type ManagerZKitConfig = {
-  circuits: string;
-  artifacts: string;
-  verifiers: string;
+  circuitsDir: string;
+  artifactsDir: string;
+  verifiersDir: string;
   ptauFile: string;
 };
 

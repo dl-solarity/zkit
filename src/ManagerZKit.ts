@@ -26,9 +26,9 @@ export class ManagerZKit {
       : path.join(projectRoot, config.ptauFile!);
 
     this._config = {
-      circuitsDir: path.join(projectRoot, config.circuits ?? "circuits"),
-      artifactsDir: path.join(projectRoot, config.artifacts ?? "zkit-artifacts"),
-      verifiersDir: path.join(projectRoot, config.verifiers ?? "contracts/verifiers"),
+      circuitsDir: path.join(projectRoot, config.circuitsDir ?? "circuits"),
+      artifactsDir: path.join(projectRoot, config.artifactsDir ?? "zkit-artifacts"),
+      verifiersDir: path.join(projectRoot, config.verifiersDir ?? "contracts/verifiers"),
       tempDir,
       ptau: {
         isGlobal: isGlobalPtau,
