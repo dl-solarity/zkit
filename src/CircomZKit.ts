@@ -1,4 +1,3 @@
-import fs from "fs";
 import os from "os";
 import path from "path";
 
@@ -6,7 +5,6 @@ import { CircuitZKit } from "./CircuitZKit";
 import { ManagerZKit } from "./ManagerZKit";
 import { CircuitInfo } from "./types";
 import { readDirRecursively } from "./utils";
-import { resolveInclude } from "ejs";
 
 export class CircomZKit {
   constructor(private readonly _manager: ManagerZKit) {}
