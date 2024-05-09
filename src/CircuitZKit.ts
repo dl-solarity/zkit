@@ -156,7 +156,7 @@ export class CircuitZKit {
       return BigInt(`0x${buffer.reverse().toString("hex")}`);
     };
 
-    /// @dev https://github.com/iden3/r1csfile/blob/master/doc/r1cs_bin_format.md#format-of-the-file
+    /// @dev https://github.com/iden3/r1csfile/blob/d82959da1f88fbd06db0407051fde94afbf8824a/doc/r1cs_bin_format.md#format-of-the-file
     const numberOfSections = readBytes(8, 4);
     let sectionStart = 12;
 
