@@ -3,19 +3,39 @@ import fs from "fs";
 import path from "path";
 import * as snarkjs from "snarkjs";
 
-import { defaultCompileOptions } from "./defaults";
+import { defaultCompileOptions } from "./config";
 import { ManagerZKit } from "./ManagerZKit";
-import { Calldata, CompileOptions, DirType, FileType, Inputs, ProofStruct } from "./types";
+import { CompileOptions } from "./config";
+import { Calldata, DirType, FileType, Inputs, ProofStruct } from "./types";
 import { readDirRecursively } from "./utils";
 
 const { CircomRunner, bindings } = require("@distributedlab/circom2");
 
+/**
+ * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
+ *
+ * @dev If you want to work with multiple circuits, consider using the `CircomZKit`.
+ */
 export class CircuitZKit {
+  /**
+   * Creates a new instance of `CircuitZKit`.
+   *
+   * @param {ManagerZKit} _manager - The manager that maintains the global state.
+   * @param {string} _circuit - The path to the circuit.
+   */
   constructor(
     private readonly _manager: ManagerZKit,
     private readonly _circuit: string,
   ) {}
 
+  /**
+   * Compiles the circuit and generates the artifacts.
+   *
+   * @dev If compilation fails, the latest valid artifacts will be preserved.
+   * @dev Doesn't show the compilation error if `quiet` is set to `true`.
+   *
+   * @param {Partial<CompileOptions>} [options=defaultCompileOptions] - Compilation options.
+   */
   public async compile(options: Partial<CompileOptions> = defaultCompileOptions): Promise<void> {
     const tempDir = this._manager.getTempDir();
 
@@ -40,6 +60,9 @@ export class CircuitZKit {
     }
   }
 
+  /**
+   * Creates a verifier contract.
+   */
   public async createVerifier(): Promise<void> {
     const tempDir = this._manager.getTempDir();
 
@@ -66,6 +89,15 @@ export class CircuitZKit {
     }
   }
 
+  /**
+   * Generates a proof for the given inputs.
+   *
+   * @dev The `inputs` should be in the same order as the circuit expects them.
+   *
+   * @param {Inputs} inputs - The inputs for the circuit.
+   * @returns {Promise<ProofStruct>} The generated proof.
+   * @todo Add support for other proving systems.
+   */
   public async generateProof(inputs: Inputs): Promise<ProofStruct> {
     const zKeyFile = this._mustGetFile("zkey");
     const wasmFile = this._mustGetFile("wasm");
@@ -73,6 +105,15 @@ export class CircuitZKit {
     return (await snarkjs.groth16.fullProve(inputs, wasmFile, zKeyFile)) as ProofStruct;
   }
 
+  /**
+   * Verifies the given proof.
+   *
+   * @dev The `proof` can be generated using the `generateProof` method.
+   * @dev The `proof.publicSignals` should be in the same order as the circuit expects them.
+   *
+   * @param {ProofStruct} proof - The proof to verify.
+   * @returns {Promise<boolean>} Whether the proof is valid.
+   */
   public async verifyProof(proof: ProofStruct): Promise<boolean> {
     const vKeyFile = this._mustGetFile("vkey");
 
@@ -81,20 +122,43 @@ export class CircuitZKit {
     return await snarkjs.groth16.verify(verifier, proof.publicSignals, proof.proof);
   }
 
+  /**
+   * Generates the calldata for the given proof. The calldata can be used to verify the proof on-chain.
+   *
+   * @param {ProofStruct} proof - The proof to generate calldata for.
+   * @returns {Promise<Calldata>} - The generated calldata.
+   * @todo Add other types of calldata.
+   */
   public async generateCalldata(proof: ProofStruct): Promise<Calldata> {
     const calldata = await snarkjs.groth16.exportSolidityCallData(proof.proof, proof.publicSignals);
 
     return JSON.parse(`[${calldata}]`) as Calldata;
   }
 
+  /**
+   * Returns the circuit ID. The circuit ID is the name of the circuit file without the extension.
+   *
+   * @returns {string} The circuit ID.
+   */
   public getCircuitId(): string {
     return path.parse(this._circuit).name;
   }
 
+  /**
+   * Returns the verifier ID. The verifier ID is the name of the circuit file without the extension, suffixed with "Verifier".
+   *
+   * @returns {string} The verifier ID.
+   */
   public getVerifierId(): string {
     return `${path.parse(this._circuit).name}Verifier`;
   }
 
+  /**
+   * Generates zero-knowledge key for the circuit.
+   *
+   * @param {string} outDir - The directory to save the generated key.
+   * @todo This method may cause issues https://github.com/iden3/snarkjs/issues/494
+   */
   private async _generateZKey(outDir: string): Promise<void> {
     const r1csFile = this._getFile("r1cs", outDir);
     const zKeyFile = this._getFile("zkey", outDir);
@@ -105,6 +169,11 @@ export class CircuitZKit {
     await snarkjs.zKey.newZKey(r1csFile, ptauFile, zKeyFile);
   }
 
+  /**
+   * Generates verification key for the circuit.
+   *
+   * @param {string} outDir - The directory to save the generated key.
+   */
   private async _generateVKey(outDir: string): Promise<void> {
     const zKeyFile = this._getFile("zkey", outDir);
     const vKeyFile = this._getFile("vkey", outDir);
@@ -114,6 +183,13 @@ export class CircuitZKit {
     fs.writeFileSync(vKeyFile, JSON.stringify(vKeyData));
   }
 
+  /**
+   * Returns the arguments to compile the circuit.
+   *
+   * @param {CompileOptions} options - Compilation options.
+   * @param {string} outDir - The directory to save the compiled artifacts.
+   * @returns {string[]} The arguments to compile the circuit.
+   */
   private _getCompileArgs(options: CompileOptions, outDir: string): string[] {
     let args = [this._circuit, "--r1cs", "--wasm"];
 
@@ -126,6 +202,12 @@ export class CircuitZKit {
     return args;
   }
 
+  /**
+   * Compiles the circuit.
+   *
+   * @param {CompileOptions} options - Compilation options.
+   * @param {string} outDir - The directory to save the compiled artifacts.
+   */
   private async _compile(options: CompileOptions, outDir: string): Promise<void> {
     const args = this._getCompileArgs(options, outDir);
 
@@ -143,6 +225,12 @@ export class CircuitZKit {
     }
   }
 
+  /**
+   * Returns the number of constraints in the circuit. This value is used to fetch the correct `ptau` file.
+   *
+   * @param {string} outDir - The directory where the compiled artifacts are saved.
+   * @returns {Promise<number>} The number of constraints in the circuit.
+   */
   async _getConstraints(outDir: string): Promise<number> {
     const r1csFile = this._getFile("r1cs", outDir);
 
@@ -177,6 +265,13 @@ export class CircuitZKit {
     throw new Error("Header section is not found.");
   }
 
+  /**
+   * Returns the path to the file of the given type.
+   *
+   * @param {FileType} fileType - The type of the file.
+   * @param {string | undefined} temp - The temporary directory to use.
+   * @returns {string} The path to the file.
+   */
   private _getFile(fileType: FileType, temp?: string): string {
     const circuitId = this.getCircuitId();
 
@@ -200,6 +295,12 @@ export class CircuitZKit {
     }
   }
 
+  /**
+   * Returns the path to the directory of the given type.
+   *
+   * @param {DirType} dirType - The type of the directory.
+   * @returns {string} The path to the directory.
+   */
   private _getDir(dirType: DirType): string {
     const circuitRelativePath = path.relative(this._manager.getCircuitsDir(), this._circuit);
 
@@ -215,6 +316,13 @@ export class CircuitZKit {
     }
   }
 
+  /**
+   * Returns the path to the file of the given type. Throws an error if the file doesn't exist.
+   *
+   * @param {FileType} fileType - The type of the file.
+   * @param {string | undefined} temp - The temporary directory to use.
+   * @returns {string} The path to the file.
+   */
   private _mustGetFile(fileType: FileType, temp?: string): string {
     const file = this._getFile(fileType, temp);
 
@@ -225,7 +333,13 @@ export class CircuitZKit {
     return file;
   }
 
-  private _moveFromTempDirToOutDir(tempDir: string, outDir: string) {
+  /**
+   * Moves the files from the temporary directory to the output directory.
+   *
+   * @param {string} tempDir - The temporary directory.
+   * @param {string} outDir - The output directory.
+   */
+  private _moveFromTempDirToOutDir(tempDir: string, outDir: string): void {
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.mkdirSync(outDir, { recursive: true });
 
@@ -241,6 +355,13 @@ export class CircuitZKit {
     });
   }
 
+  /**
+   * Returns a new instance of `CircomRunner`. The `CircomRunner` is a wasm module that compiles the circuit.
+   *
+   * @param {string[]} args - The arguments to run the `circom` compiler.
+   * @param {boolean} quiet - Whether to suppress the compilation error.
+   * @returns {typeof CircomRunner} The `CircomRunner` instance.
+   */
   private _getCircomRunner(args: string[], quiet: boolean): typeof CircomRunner {
     return new CircomRunner({
       args,

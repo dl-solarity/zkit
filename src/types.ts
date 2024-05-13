@@ -1,5 +1,3 @@
-const { Context } = require("@distributedlab/circom2");
-
 export type NumericString = `${number}` | string;
 
 export type PublicSignals = NumericString[];
@@ -29,35 +27,6 @@ export type ArrayLike = NumberLike[] | ArrayLike[];
 export type InputLike = NumberLike | ArrayLike;
 
 export type Inputs = Record<string, InputLike>;
-
-export type ManagerZKitConfig = {
-  circuitsDir: string;
-  artifactsDir: string;
-  verifiersDir: string;
-  ptauFile: string;
-};
-
-export type ManagerZKitPrivateConfig = {
-  circuitsDir: string;
-  artifactsDir: string;
-  verifiersDir: string;
-  tempDir: string;
-  ptau: {
-    isGlobal: boolean;
-    path: string;
-  };
-  compiler: typeof Context;
-  templates: {
-    groth16: string;
-  };
-};
-
-export type CompileOptions = {
-  sym: boolean;
-  json: boolean;
-  c: boolean;
-  quiet: boolean;
-};
 
 export type CircuitInfo = {
   path: string;
