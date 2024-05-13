@@ -3,29 +3,28 @@ import fs from "fs";
 import path from "path";
 import * as snarkjs from "snarkjs";
 
-import { defaultCompileOptions } from "./config";
+import { defaultCompileOptions, CompileOptions } from "../config/config";
 import { ManagerZKit } from "./ManagerZKit";
-import { CompileOptions } from "./config";
-import { Calldata, DirType, FileType, Inputs, ProofStruct } from "./types";
-import { readDirRecursively } from "./utils";
+import { Calldata, DirType, FileType, Inputs, ProofStruct } from "../types/types";
+import { readDirRecursively } from "../utils/utils";
 
 const { CircomRunner, bindings } = require("@distributedlab/circom2");
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
  *
- * @dev If you want to work with multiple circuits, consider using the `CircomZKit`.
+ * @dev This class is not meant to be used directly. Use the `CircomZKit` to create its instance.
  */
 export class CircuitZKit {
   /**
    * Creates a new instance of `CircuitZKit`.
    *
-   * @param {ManagerZKit} _manager - The manager that maintains the global state.
    * @param {string} _circuit - The path to the circuit.
+   * @param {ManagerZKit} _manager - The manager that maintains the global state.
    */
   constructor(
-    private readonly _manager: ManagerZKit,
     private readonly _circuit: string,
+    private readonly _manager: ManagerZKit,
   ) {}
 
   /**
@@ -44,10 +43,7 @@ export class CircuitZKit {
 
       fs.mkdirSync(tempDir, { recursive: true });
 
-      const overriddenOptions: CompileOptions = {
-        ...defaultCompileOptions,
-        ...options,
-      };
+      const overriddenOptions: CompileOptions = { ...defaultCompileOptions, ...options };
 
       await this._compile(overriddenOptions, tempDir);
 
@@ -356,7 +352,7 @@ export class CircuitZKit {
   }
 
   /**
-   * Returns a new instance of `CircomRunner`. The `CircomRunner` is a wasm module that compiles the circuit.
+   * Returns a new instance of `CircomRunner`. The `CircomRunner` is used to compile the circuit.
    *
    * @param {string[]} args - The arguments to run the `circom` compiler.
    * @param {boolean} quiet - Whether to suppress the compilation error.

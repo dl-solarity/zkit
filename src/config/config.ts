@@ -4,13 +4,15 @@ export type ManagerZKitConfig = {
   circuitsDir: string;
   artifactsDir: string;
   verifiersDir: string;
-  ptauFile: string;
+  ptauDir: string;
+  allowDownload: boolean;
 };
 
 export const defaultManagerOptions: Partial<ManagerZKitConfig> = {
   circuitsDir: "circuits",
   artifactsDir: "zkit-artifacts",
   verifiersDir: "contracts/verifiers",
+  allowDownload: true,
 };
 
 export type CompileOptions = {
@@ -27,15 +29,7 @@ export const defaultCompileOptions: CompileOptions = {
   quiet: false,
 };
 
-export type ManagerZKitPrivateConfig = {
-  circuitsDir: string;
-  artifactsDir: string;
-  verifiersDir: string;
-  tempDir: string;
-  ptau: {
-    isGlobal: boolean;
-    path: string;
-  };
+export type ManagerZKitPrivateConfig = ManagerZKitConfig & {
   compiler: typeof Context;
   templates: {
     groth16: string;

@@ -3,8 +3,9 @@ import path from "path";
 
 import { CircuitZKit } from "./CircuitZKit";
 import { ManagerZKit } from "./ManagerZKit";
-import { CircuitInfo } from "./types";
-import { readDirRecursively } from "./utils";
+import { CircuitInfo } from "../types/types";
+import { readDirRecursively } from "../utils/utils";
+import { defaultManagerOptions, ManagerZKitConfig } from "../config/config";
 
 /**
  * `CircomZKit` acts as a factory for `CircuitZKit` instances.
@@ -15,12 +16,10 @@ export class CircomZKit {
   /**
    * Creates a new `CircomZKit` instance.
    *
-   * @dev If no `ManagerZKit` instance is provided, a default instance will be created.
-   *
-   * @param {ManagerZKit | undefined} manager - The `ManagerZKit` instance to use.
+   * @param {Partial<ManagerZKitConfig>} [options=defaultManagerOptions] - The configuration options to use.
    */
-  constructor(manager?: ManagerZKit) {
-    this._manager = manager ?? new ManagerZKit();
+  constructor(options: Partial<ManagerZKitConfig> = defaultManagerOptions) {
+    this._manager = new ManagerZKit({ ...defaultManagerOptions, ...options });
   }
 
   /**
@@ -55,7 +54,7 @@ export class CircomZKit {
       );
     }
 
-    return new CircuitZKit(this._manager, path.join(this._manager.getCircuitsDir(), candidates[0]));
+    return new CircuitZKit(path.join(this._manager.getCircuitsDir(), candidates[0]), this._manager);
   }
 
   /**
@@ -100,7 +99,7 @@ export class CircomZKit {
 
     let circuits = [] as string[];
 
-    readDirRecursively(circuitsDir, (dir: string, file: string) => {
+    readDirRecursively(circuitsDir, (_dir: string, file: string) => {
       if (path.extname(file) == ".circom") {
         circuits.push(path.relative(circuitsDir, file));
       }

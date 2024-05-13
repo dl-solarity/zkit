@@ -1,4 +1,4 @@
-import { CircomZKit, ManagerZKit } from "../src";
+import { CircomZKit } from "../src";
 
 jest.mock("readline", () => ({
   createInterface: jest.fn().mockReturnValue({
@@ -13,13 +13,13 @@ jest.mock("readline", () => ({
 
 describe("happy flow", function () {
   test("happy flow", async () => {
-    const manager = new ManagerZKit({
+    const circom = new CircomZKit({
       circuitsDir: "test/circuits",
       artifactsDir: "test/zkit-artifacts",
-      verifiersDir: "test/verifiers"
+      verifiersDir: "test/verifiers",
+      ptauDir: "test/ptau",
+      allowDownload: false,
     });
-
-    const circom = new CircomZKit(manager);
 
     console.log(circom.getCircuits());
 

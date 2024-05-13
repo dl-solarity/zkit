@@ -36,3 +36,8 @@ export type CircuitInfo = {
 export type FileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm" | "sol";
 export type DirType = "circuit" | "artifact" | "verifier";
 export type TemplateType = "groth16";
+
+export type PtauInfo = {
+  file: string;
+  url: string | null;
+};
