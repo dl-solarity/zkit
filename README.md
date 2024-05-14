@@ -68,7 +68,7 @@ new CircomZKit({ ptauDir: "./my-ptau" });
 ```
 
 > [!NOTE]
-> Note that all the files in the `ptauDir` directory must have the `powers-of-tau-{x}.ptau` name format, where `{x}` is a maximum degree (2<sup>x</sup>) of constraints a circuit supports.
+> Note that all the files in the `ptauDir` directory must have the `powers-of-tau-{x}.ptau` name format, where `{x}` is a maximum degree (2<sup>x</sup>) of constraints a `ptau` supports.
 
 ZKit may also ask you for the permission to download the power-of-tau files. You can enable this by providing the `allowDownload` option:
 
