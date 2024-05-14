@@ -59,7 +59,7 @@ By default, ZKit will look for the circuit file in the `./circuits` directory. Y
 new CircomZKit({ circuitsDir: "./my-circuits" });
 ```
 
-To generate zkey, the power-of-tau file is required. ZKit automatically downloads those files to the `${HOME}/.zkit/.ptau` so you don't need to re-download them every time you start a new project.
+To generate zkey, the power-of-tau file is required. ZKit automatically downloads those files to the `${HOME}/.zkit/.ptau` directory, so you don't need to re-download them every time you start a new project.
 
 You can provide a custom path to the directory where the power-of-tau files are stored:
 
