@@ -3,16 +3,33 @@ import path from "path";
 
 import { CircuitZKit } from "./CircuitZKit";
 import { ManagerZKit } from "./ManagerZKit";
-import { CircuitInfo } from "./types";
-import { readDirRecursively } from "./utils";
+import { CircuitInfo } from "../types/types";
+import { readDirRecursively } from "../utils/utils";
+import { defaultManagerOptions, ManagerZKitConfig } from "../config/config";
 
+/**
+ * `CircomZKit` acts as a factory for `CircuitZKit` instances.
+ */
 export class CircomZKit {
   private readonly _manager: ManagerZKit;
 
-  constructor(manager?: ManagerZKit) {
-    this._manager = manager ?? new ManagerZKit();
+  /**
+   * Creates a new `CircomZKit` instance.
+   *
+   * @param {Partial<ManagerZKitConfig>} [options=defaultManagerOptions] - The configuration options to use.
+   */
+  constructor(options: Partial<ManagerZKitConfig> = defaultManagerOptions) {
+    this._manager = new ManagerZKit({ ...defaultManagerOptions, ...options });
   }
 
+  /**
+   * Returns a `CircuitZKit` instance for the specified circuit.
+   *
+   * @dev If the circuit id is not unique, the path to the circuit file must be provided.
+   *
+   * @param {string} circuit - The path to the circuit file or the circuit id (filename without extension).
+   * @returns {CircomZKit} The `CircuitZKit` instance.
+   */
   public getCircuit(circuit: string): CircuitZKit {
     const circuits = this._getAllCircuits();
 
@@ -37,9 +54,16 @@ export class CircomZKit {
       );
     }
 
-    return new CircuitZKit(this._manager, path.join(this._manager.getCircuitsDir(), candidates[0]));
+    return new CircuitZKit(path.join(this._manager.getCircuitsDir(), candidates[0]), this._manager);
   }
 
+  /**
+   * Returns an array of all circuits available in the circuits directory.
+   *
+   * @dev If a circuit id is not unique, the id will be set to `null`.
+   *
+   * @returns {CircuitInfo[]} An array of circuit information objects.
+   */
   public getCircuits(): CircuitInfo[] {
     const circuits = this._getAllCircuits();
 
@@ -65,12 +89,17 @@ export class CircomZKit {
     return result;
   }
 
+  /**
+   * Returns an array of all circuits paths available in the circuits directory.
+   *
+   * @returns {string[]} An array of circuit paths.
+   */
   private _getAllCircuits(): string[] {
     const circuitsDir = this._manager.getCircuitsDir();
 
     let circuits = [] as string[];
 
-    readDirRecursively(circuitsDir, (dir: string, file: string) => {
+    readDirRecursively(circuitsDir, (_dir: string, file: string) => {
       if (path.extname(file) == ".circom") {
         circuits.push(path.relative(circuitsDir, file));
       }

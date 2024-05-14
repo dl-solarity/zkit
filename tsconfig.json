@@ -12,7 +12,7 @@
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
   },
   "exclude": [
     "dist",
