@@ -129,6 +129,7 @@ Generates calldata by proof for the Solidity verifier's `verifyProof` method.
 const calldata = await multiplier.verifyProof(proof);
 ```
 
-## How it works
+## Known limitations
 
-ZKit is a wrapper over the `@distributedlab/circom2` compiler and `snarkjs` library.
+- Currently, ZKit supports only Groth16 proving system.
+- The `compile` method may cause [issues](https://github.com/iden3/snarkjs/issues/494).
