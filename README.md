@@ -132,4 +132,5 @@ const calldata = await multiplier.verifyProof(proof);
 ## Known limitations
 
 - Currently, ZKit supports only the Groth16 proving system.
+- Zkey generation doesn't allow additional contributions.
 - The `compile` method may cause [issues](https://github.com/iden3/snarkjs/issues/494).
