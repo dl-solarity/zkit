@@ -53,7 +53,7 @@ main()
   });
 ```
 
-By default, ZKit will look for the circuit file in the `./circuits` directory. You can change this by providing your custom directory:
+By default, ZKit will look for the circuit file in the `./circuits` directory. However, you can change this by providing a custom one:
 
 ```typescript
 new CircomZKit({ circuitsDir: "./my-circuits" });
