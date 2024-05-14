@@ -61,7 +61,7 @@ new CircomZKit({ circuitsDir: "./my-circuits" });
 
 To generate zkey, the power-of-tau file is required. ZKit automatically downloads those files from [Hermes](https://hermez.s3-eu-west-1.amazonaws.com/) to the `${HOME}/.zkit/.ptau` directory, so you don't need to re-download them every time you start a new project.
 
-You can provide a custom path to the directory where the power-of-tau files are stored:
+You can also provide a custom path to the directory where the power-of-tau files are stored:
 
 ```typescript
 new CircomZKit({ ptauDir: "./my-ptau" });
@@ -70,7 +70,7 @@ new CircomZKit({ ptauDir: "./my-ptau" });
 > [!NOTE]
 > Note that all the files in the `ptauDir` directory must have the `powers-of-tau-{x}.ptau` name format, where `{x}` is a maximum degree (2<sup>x</sup>) of constraints a `ptau` supports.
 
-ZKit may also ask you for the permission to download the power-of-tau files. You can enable this by providing the `allowDownload` option:
+ZKit may also ask you for the permission to download the power-of-tau files. You can enable this by toggling off the `allowDownload` option:
 
 ```typescript
 new CircomZKit({ allowDownload: false });
@@ -80,7 +80,7 @@ new CircomZKit({ allowDownload: false });
 
 Once you created a `CircuitZKit` instance using the `getCircuit` method, you can manage the underlying circuit using the following methods:
 
-#### compile
+#### compile()
 
 Compiles the circuit and generates the artifacts in the `./zkit-artifacts` or in the provided `artifactsDir` directory. The default output is `r1cs`, `zkey` and `vkey` files.
 
@@ -88,7 +88,7 @@ Compiles the circuit and generates the artifacts in the `./zkit-artifacts` or in
 await multiplier.compile();
 ```
 
-#### createVerifier
+#### createVerifier()
 
 Creates Solidity verifier contract  in the `./contracts/verifiers` or in the provided `verifiersDir` directory. 
 
@@ -99,7 +99,7 @@ Creates Solidity verifier contract  in the `./contracts/verifiers` or in the pro
 await multiplier.createVerifier();
 ```
 
-#### generateProof
+#### generateProof()
 
 Generates a proof for the given inputs.
 
@@ -111,7 +111,7 @@ Generates a proof for the given inputs.
 const proof = await multiplier.createVerifier({ a: 2, b: 3});
 ```
 
-#### verifyProof
+#### verifyProof()
 
 Verifies the proof.
 
@@ -120,7 +120,7 @@ Verifies the proof.
 const isValidProof = await multiplier.verifyProof(proof);
 ```
 
-#### generateCalldata
+#### generateCalldata()
 
 Generates calldata by proof for the Solidity verifier's `verifyProof` method.
 
