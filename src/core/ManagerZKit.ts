@@ -7,7 +7,7 @@ import { v4 as uuid } from "uuid";
 
 import { ManagerZKitConfig, ManagerZKitPrivateConfig, defaultManagerOptions } from "../config/config";
 import { PtauInfo, TemplateType } from "../types/types";
-import { downloadFile, readDirRecursively } from "../utils/utils";
+import { downloadFile } from "../utils/utils";
 
 /**
  * `ManagerZKit` provides configuration options and utility methods used by the `CircomZKit` and `CircuitZKit` classes.
@@ -157,7 +157,9 @@ export class ManagerZKit {
    */
   private async _downloadPtau(ptauInfo: PtauInfo): Promise<void> {
     if (!this.getAllowDownload() && !(await this._askForDownloadAllowance(ptauInfo))) {
-      throw new Error('Download is cancelled. Allow download or consider passing "ptauDir=PATH_TO_LOCAL_DIR"');
+      throw new Error(
+        'Download is cancelled. Allow download or consider passing "ptauDir=PATH_TO_LOCAL_DIR" to the existing ptau files',
+      );
     }
 
     fs.mkdirSync(this.getPtauDir(), { recursive: true });
@@ -174,29 +176,32 @@ export class ManagerZKit {
    * @returns {PtauInfo} The `ptau` file path and download url if the file doesn't exist.
    */
   private _searchPtau(ptauId: number): PtauInfo {
-    let foundPtauId = 0;
-    let foundFile = "";
+    let entries = [] as fs.Dirent[];
 
-    readDirRecursively(this.getPtauDir(), (_dir: string, file: string) => {
-      const match = path.basename(file).match(/^powers-of-tau-(\d+)\.ptau$/);
+    if (fs.existsSync(this.getPtauDir())) {
+      entries = fs.readdirSync(this.getPtauDir(), { withFileTypes: true });
+    }
+
+    const entry = entries.find((entry) => {
+      if (!entry.isFile()) {
+        return false;
+      }
+
+      const match = entry.name.match(/^powers-of-tau-(\d+)\.ptau$/);
 
       if (!match) {
-        return;
+        return false;
       }
 
       const entryPtauId = parseInt(match[1]);
 
-      if (entryPtauId >= ptauId && entryPtauId >= foundPtauId) {
-        foundPtauId = entryPtauId;
-        foundFile = file;
-      }
+      return ptauId <= entryPtauId;
     });
 
-    const file = foundPtauId == 0 ? path.join(this.getPtauDir(), `powers-of-tau-${ptauId}.ptau`) : foundFile;
-    const url =
-      foundPtauId == 0
-        ? `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_${ptauId.toString().padStart(2, "0")}.ptau`
-        : null;
+    const file = path.join(this.getPtauDir(), entry ? entry.name : `powers-of-tau-${ptauId}.ptau`);
+    const url = entry
+      ? null
+      : `https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_${ptauId.toString().padStart(2, "0")}.ptau`;
 
     return { file, url };
   }
