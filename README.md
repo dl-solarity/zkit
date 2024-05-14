@@ -2,7 +2,7 @@
 
 # ZKit
 
-This package provides a set of utilities to help you develop zk circuits using circom.
+A zero knowledge kit that helps you develop circuits using Circom.
 
 ## Installation
 
@@ -13,6 +13,13 @@ npm install --save-dev @solarity/zkit
 ```
 
 ## Usage
+
+ZKit is an S-tier Circom assistant:
+
+- Compile and interact with circuits without snarkjs hassle
+- Generate and verify ZK proofs with a single line of code
+- Render optimized Solidity verifiers
+- Forget about native dependencies - everything is in TypeScript
 
 ### CircomZKit
 
