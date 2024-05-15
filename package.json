@@ -4,7 +4,7 @@
   "license": "MIT",
   "author": "Distributed Lab",
   "readme": "README.md",
-  "description": "Circom zero knowledge development kit",
+  "description": "Circom zero knowledge kit",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dl-solarity/zkit.git"
@@ -18,6 +18,7 @@
   "keywords": [
     "solarity",
     "circom",
+    "kit",
     "zkp"
   ],
   "main": "dist/index.js",

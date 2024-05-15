@@ -1,7 +1,7 @@
 [![npm](https://img.shields.io/npm/v/@solarity/zkit.svg)](https://www.npmjs.com/package/@solarity/zkit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-# ZKit - Zero Knowledge Kit
+# ZKit - Circom Zero Knowledge Kit
 
 **A zero knowledge kit that helps you develop circuits using Circom.**
 
