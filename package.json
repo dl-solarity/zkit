@@ -27,7 +27,7 @@
     "build": "tsc",
     "test": "jest --forceExit",
     "lint-fix": "prettier --write 'src/**/*.ts'",
-    "publish-to-npm": "npm run build && rm -rf dist/core/templates && cp -rf src/core/templates dist/core/templates && npm publish ./ --access public"
+    "publish-to-npm": "npm run lint-fix && bash ./scripts/publish.sh"
   },
   "dependencies": {
     "@distributedlab/circom2": "0.2.18-rc.2",
