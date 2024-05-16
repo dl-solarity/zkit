@@ -45,3 +45,7 @@ typings/
 
 # Optional npm cache directory
 .npm
+
+test/ptau
+test/verifiers
+test/zkit-artifacts
