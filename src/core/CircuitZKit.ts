@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import ejs from "ejs";
 import fs from "fs";
 import path from "path";
@@ -47,7 +48,7 @@ export class CircuitZKit {
 
       await this._compile(overriddenOptions, tempDir);
 
-      await this._generateZKey(tempDir);
+      await this._generateZKey(overriddenOptions, tempDir);
       await this._generateVKey(tempDir);
 
       this._moveFromTempDirToOutDir(tempDir, artifactDir);
@@ -152,17 +153,34 @@ export class CircuitZKit {
   /**
    * Generates zero-knowledge key for the circuit.
    *
+   * @param {CompileOptions} options - Compilation options.
    * @param {string} outDir - The directory to save the generated key.
    * @todo This method may cause issues https://github.com/iden3/snarkjs/issues/494
    */
-  private async _generateZKey(outDir: string): Promise<void> {
+  private async _generateZKey(options: CompileOptions, outDir: string): Promise<void> {
     const r1csFile = this._getFile("r1cs", outDir);
     const zKeyFile = this._getFile("zkey", outDir);
 
     const constraints = await this._getConstraints(outDir);
     const ptauFile = await this._manager.fetchPtauFile(constraints);
 
-    await snarkjs.zKey.newZKey(r1csFile, ptauFile, zKeyFile);
+    if (options.setup == "groth16") {
+      await snarkjs.zKey.newZKey(r1csFile, ptauFile, zKeyFile);
+
+      const zKeyFileNext = `${zKeyFile}.next.zkey`;
+
+      for (let i = 0; i < options.contributions; ++i) {
+        await snarkjs.zKey.contribute(
+          zKeyFile,
+          zKeyFileNext,
+          `${zKeyFile}_contribution_${i}`,
+          randomBytes(32).toString("hex"),
+        );
+
+        fs.rmSync(zKeyFile);
+        fs.renameSync(zKeyFileNext, zKeyFile);
+      }
+    }
   }
 
   /**
@@ -336,15 +354,16 @@ export class CircuitZKit {
    * @param {string} outDir - The output directory.
    */
   private _moveFromTempDirToOutDir(tempDir: string, outDir: string): void {
-    fs.rmSync(outDir, { recursive: true, force: true });
-    fs.mkdirSync(outDir, { recursive: true });
-
     readDirRecursively(tempDir, (dir: string, file: string) => {
       const correspondingOutDir = path.join(outDir, path.relative(tempDir, dir));
       const correspondingOutFile = path.join(outDir, path.relative(tempDir, file));
 
       if (!fs.existsSync(correspondingOutDir)) {
         fs.mkdirSync(correspondingOutDir);
+      }
+
+      if (fs.existsSync(correspondingOutFile)) {
+        fs.rmSync(correspondingOutFile);
       }
 
       fs.copyFileSync(file, correspondingOutFile);
