@@ -354,6 +354,8 @@ export class CircuitZKit {
    * @param {string} outDir - The output directory.
    */
   private _moveFromTempDirToOutDir(tempDir: string, outDir: string): void {
+    fs.mkdirSync(outDir, { recursive: true });
+
     readDirRecursively(tempDir, (dir: string, file: string) => {
       const correspondingOutDir = path.join(outDir, path.relative(tempDir, dir));
       const correspondingOutFile = path.join(outDir, path.relative(tempDir, file));
