@@ -1,3 +1,5 @@
+import { TemplateType } from "../types/types";
+
 const { Context } = require("@distributedlab/circom2");
 
 export type ManagerZKitConfig = {
@@ -20,6 +22,8 @@ export type CompileOptions = {
   json: boolean;
   c: boolean;
   quiet: boolean;
+  setup: TemplateType;
+  contributions: number;
 };
 
 export const defaultCompileOptions: CompileOptions = {
@@ -27,6 +31,8 @@ export const defaultCompileOptions: CompileOptions = {
   json: false,
   c: false,
   quiet: false,
+  setup: "groth16",
+  contributions: 5,
 };
 
 export type ManagerZKitPrivateConfig = ManagerZKitConfig & {
