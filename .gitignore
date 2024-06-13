@@ -3,12 +3,8 @@ node_modules
 .idea
 .eslintcache
 
-# Hardhat files
-cache
-artifacts
-coverage.json
 coverage
-generated-types
+coverage.json
 
 publish
 !publish/package.json
