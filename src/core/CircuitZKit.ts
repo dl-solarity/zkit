@@ -14,12 +14,16 @@ import {
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
- *
- * @dev This class is not meant to be used directly. Use the `CircomZKit` to create its instance.
  */
 export class CircuitZKit {
   constructor(private readonly _config: CircuitZKitConfig) {}
 
+  /**
+   * Returns the Solidity verifier template for the specified proving system.
+   *
+   * @param {VerifierTemplateType} templateType - The template type.
+   * @returns {string} The Solidity verifier template.
+   */
   public static getTemplate(templateType: VerifierTemplateType): string {
     switch (templateType) {
       case "groth16":
@@ -30,7 +34,7 @@ export class CircuitZKit {
   }
 
   /**
-   * Creates a verifier contract.
+   * Creates a Solidity verifier contract.
    */
   public async createVerifier(): Promise<void> {
     const vKeyFilePath: string = this.mustGetArtifactsFilePath("vkey");
@@ -97,27 +101,38 @@ export class CircuitZKit {
   }
 
   /**
-   * Returns the circuit ID. The circuit ID is the name of the circuit file without the extension.
+   * Returns the circuit name. The circuit name is the name of the circuit file without the extension.
    *
-   * @returns {string} The circuit ID.
+   * @returns {string} The circuit name.
    */
   public getCircuitName(): string {
     return this._config.circuitName;
   }
 
   /**
-   * Returns the verifier ID. The verifier ID is the name of the circuit file without the extension, suffixed with "Verifier".
+   * Returns the verifier name. The verifier name is the name of the circuit file without the extension, suffixed with "Verifier".
    *
-   * @returns {string} The verifier ID.
+   * @returns {string} The verifier name.
    */
   public getVerifierName(): string {
     return `${this._config.circuitName}Verifier`;
   }
 
+  /**
+   * Returns the type of verifier template that was stored in the config
+   *
+   * @returns {VerifierTemplateType} The verifier template type.
+   */
   public getTemplateType(): VerifierTemplateType {
     return this._config.templateType ?? "groth16";
   }
 
+  /**
+   * Returns the path to the file of the given type inside artifacts directory. Throws an error if the file doesn't exist.
+   *
+   * @param {ArtifactsFileType} fileType - The type of the file.
+   * @returns {string} The path to the file.
+   */
   public mustGetArtifactsFilePath(fileType: ArtifactsFileType): string {
     const file = this.getArtifactsFilePath(fileType);
 
@@ -128,6 +143,12 @@ export class CircuitZKit {
     return file;
   }
 
+  /**
+   * Returns the path to the file of the given type inside artifacts directory.
+   *
+   * @param {ArtifactsFileType} fileType - The type of the file.
+   * @returns {string} The path to the file.
+   */
   public getArtifactsFilePath(fileType: ArtifactsFileType): string {
     const circuitName = this.getCircuitName();
 
