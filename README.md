@@ -3,11 +3,11 @@
 
 # ZKit - Circom Zero Knowledge Kit
 
-**A zero knowledge kit that helps you develop circuits using Circom.**
+**A zero knowledge kit that helps you interact with Circom circuits.**
 
 - Generate and verify ZK proofs with a single line of code.
 - Render optimized Solidity verifiers.
-- Forget about native dependencies - everything is in TypeScript.
+- Build and work with ZK witnesses.
 
 ## Installation
 
@@ -19,8 +19,12 @@ npm install --save-dev @solarity/zkit
 
 ## Usage
 
+> [!IMPORTANT]
+> The kit is not meant to be used directly as its fitness relies heavily on the environment, Circom compilation artifacts management, processing of remappings, etc. Consider using [hardhat-zkit](https://github.com/dl-solarity/hardhat-zkit) which is a complete, developer-friendly package.
+
 ### CircuitZKit
-`CircuitZKit` is a user-friendly interface for interacting with circom circuits. 
+
+`CircuitZKit` is a user-friendly interface for interacting with circom circuits.
 
 To create a CircuitZKit object it is necessary to pass a config:
 
@@ -33,14 +37,12 @@ CircuitZKitConfig = {
 };
 ```
 
-This config contains all the necessary information about the circuit you need to work with, namely:
+This config contains all the information required to work with the circuit, namely:
+
 - `circuitName` - Name of the circuit file without extension
 - `circuitArtifactsPath` - Full path to compilation artifacts for the desired circuit
 - `verifierDirPath` - Full path to the directory where Solidity verifier file will be generated
 - `templateType` - The type of template that will be used to generate the Solidity verifier contract. Right now only `groth16` is supported
-
-> [!NOTE]
-> You should first compile the circuit before using CircuitZKit instances.
 
 #### getTemplate()
 
@@ -64,7 +66,7 @@ Generates a proof for the given inputs.
 
 ```typescript
 /// { proof: { pi_a, pi_b, pi_c, protocol, curve }, publicSignals: [6] }
-const proof = await multiplier.generateProof({ a: 2, b: 3});
+const proof = await multiplier.generateProof({ a: 2, b: 3 });
 ```
 
 #### verifyProof()
