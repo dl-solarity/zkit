@@ -3,12 +3,11 @@
 
 # ZKit - Circom Zero Knowledge Kit
 
-**A zero knowledge kit that helps you develop circuits using Circom.**
+**A zero knowledge kit that helps you interact with Circom circuits.**
 
-- Compile and interact with circuits without snarkjs hassle.
 - Generate and verify ZK proofs with a single line of code.
 - Render optimized Solidity verifiers.
-- Forget about native dependencies - everything is in TypeScript.
+- Build and work with ZK witnesses.
 
 ## Installation
 
@@ -20,67 +19,42 @@ npm install --save-dev @solarity/zkit
 
 ## Usage
 
-### CircomZKit
-
-ZKit is a configless package, which means you don't need to provide any configuration to use it:
-
-```typescript
-import { CircomZKit } from "@solarity/zkit";
-
-async function main() {
-  const zkit = new CircomZKit();
-  
-  const multiplier = zkit.getCircuit("Multiplier");
-  
-  // Generates artifacts in the "./zkit-artifacts" directory
-  await multiplier.compile();
-
-  // Generates ZK proof
-  const proof = await multiplier.generateProof({ a: 2, b: 3});
-}
-```
-
-By default, ZKit will look for the circuit file in the `./circuits` directory. However, you can change this by providing a custom one:
-
-```typescript
-new CircomZKit({ circuitsDir: "./my-circuits" });
-```
-
-To generate zkey, the power-of-tau file is required. ZKit automatically downloads those files from [Hermes](https://hermez.s3-eu-west-1.amazonaws.com/) to the `${HOME}/.zkit/.ptau` directory, so you don't need to re-download them every time you start a new project.
-
-You can also provide a custom path to the directory where the power-of-tau files are stored:
-
-```typescript
-new CircomZKit({ ptauDir: "./my-ptau" });
-```
-
 > [!IMPORTANT]
-> Note that all the files in the `ptauDir` directory must have the `powers-of-tau-{x}.ptau` name format, where `{x}` is a maximum degree (2<sup>x</sup>) of constraints a `ptau` supports.
-
-ZKit may also ask you for the permission to download the power-of-tau files. You can enable this by toggling off the `allowDownload` option:
-
-```typescript
-new CircomZKit({ allowDownload: false });
-```
+> The kit is not meant to be used directly as its fitness relies heavily on the environment, Circom compilation artifacts management, processing of remappings, etc. Consider using [hardhat-zkit](https://github.com/dl-solarity/hardhat-zkit) which is a complete, developer-friendly package.
 
 ### CircuitZKit
 
-Once you created a `CircuitZKit` instance using the `getCircuit` method, you can manage the underlying circuit using the following methods:
+`CircuitZKit` is a user-friendly interface for interacting with circom circuits.
 
-> [!NOTE]
-> You should first compile the circuit before creating verifiers or generating proofs.
-
-#### compile()
-
-Compiles the circuit and generates the artifacts in the `./zkit-artifacts` or in the provided `artifactsDir` directory. The default output is `r1cs`, `zkey` and `vkey` files.
+To create a CircuitZKit object it is necessary to pass a config:
 
 ```typescript
-await multiplier.compile();
+CircuitZKitConfig = {
+  circuitName: string;
+  circuitArtifactsPath: string;
+  verifierDirPath: string;
+  templateType?: VerifierTemplateType;
+};
+```
+
+This config contains all the information required to work with the circuit, namely:
+
+- `circuitName` - Name of the circuit file without extension
+- `circuitArtifactsPath` - Full path to compilation artifacts for the desired circuit
+- `verifierDirPath` - Full path to the directory where Solidity verifier file will be generated
+- `templateType` - The type of template that will be used to generate the Solidity verifier contract. Right now only `groth16` is supported
+
+#### getTemplate()
+
+Static `CircuitZKit` function that returns the contents of a template file by the passed type.
+
+```typescript
+const templateContent = CircuitZKit.getTemplate("groth16");
 ```
 
 #### createVerifier()
 
-Creates Solidity verifier contract  in the `./contracts/verifiers` or in the provided `verifiersDir` directory. 
+Creates a Solidity verifier contract on `verifierDirPath` path, which was specified in the config.
 
 ```typescript
 await multiplier.createVerifier();
@@ -92,7 +66,7 @@ Generates a proof for the given inputs.
 
 ```typescript
 /// { proof: { pi_a, pi_b, pi_c, protocol, curve }, publicSignals: [6] }
-const proof = await multiplier.generateProof({ a: 2, b: 3});
+const proof = await multiplier.generateProof({ a: 2, b: 3 });
 ```
 
 #### verifyProof()
@@ -116,5 +90,3 @@ const calldata = await multiplier.generateCalldata(proof);
 ## Known limitations
 
 - Currently, ZKit supports only the Groth16 proving system.
-- Zkey generation doesn't allow additional contributions.
-- The `compile` method may cause [issues](https://github.com/iden3/snarkjs/issues/494).

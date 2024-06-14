@@ -28,16 +28,12 @@ export type InputLike = NumberLike | ArrayLike;
 
 export type Inputs = Record<string, InputLike>;
 
-export type CircuitInfo = {
-  path: string;
-  id: string | null;
-};
+export type ArtifactsFileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm";
+export type VerifierTemplateType = "groth16";
 
-export type FileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm" | "sol";
-export type DirType = "circuit" | "artifact" | "verifier";
-export type TemplateType = "groth16";
-
-export type PtauInfo = {
-  file: string;
-  url: string | null;
+export type CircuitZKitConfig = {
+  circuitName: string;
+  circuitArtifactsPath: string;
+  verifierDirPath: string;
+  templateType?: VerifierTemplateType;
 };
