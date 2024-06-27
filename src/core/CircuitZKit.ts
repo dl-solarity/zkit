@@ -55,6 +55,20 @@ export class CircuitZKit {
   }
 
   /**
+   * Creates a witness for the given inputs.
+   *
+   * @dev The `inputs` should be in the same order as the circuit expects them.
+   *
+   * @param {Inputs} inputs - The inputs for the circuit.
+   */
+  public async createWitness(inputs: Inputs): Promise<void> {
+    const wasmFile = this.mustGetArtifactsFilePath("wasm");
+    const wtnsFile = this.getArtifactsFilePath("wtns");
+
+    await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
+  }
+
+  /**
    * Generates a proof for the given inputs.
    *
    * @dev The `inputs` should be in the same order as the circuit expects them.
@@ -170,6 +184,9 @@ export class CircuitZKit {
         break;
       case "json":
         fileName = `${circuitName}_constraints.json`;
+        break;
+      case "wtns":
+        fileName = `${circuitName}.wtns`;
         break;
       case "wasm":
         fileName = `${circuitName}.wasm`;

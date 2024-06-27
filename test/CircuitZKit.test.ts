@@ -12,8 +12,32 @@ describe("CircuitZKit", () => {
     return path.join(process.cwd(), "zkit", "artifacts", circuitDirSourceName);
   }
 
+  function getArtifactsDirFullPath(): string {
+    return path.join(process.cwd(), "zkit", "artifacts");
+  }
+
   function getVerifiersDirFullPath(): string {
     return path.join(process.cwd(), "contracts", "verifiers");
+  }
+
+  function readDirRecursively(dir: string, callback: (dir: string, file: string) => void): void {
+    if (!fs.existsSync(dir)) {
+      return;
+    }
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const entryPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        readDirRecursively(entryPath, callback);
+      }
+
+      if (entry.isFile()) {
+        callback(dir, entryPath);
+      }
+    }
   }
 
   describe("CircuitZKit creation", () => {
@@ -140,6 +164,38 @@ describe("CircuitZKit", () => {
       await expect(multiplierCircuit.createVerifier()).to.be.rejectedWith(
         `Expected the file "${invalidVKeyFilePath}" to exist`,
       );
+    });
+  });
+
+  describe("createWitness", () => {
+    useFixtureProject("simple-circuits");
+
+    afterEach("cleanup", async () => {
+      readDirRecursively(getArtifactsDirFullPath(), (_dir: string, file: string) => {
+        if (path.extname(file) == ".wtns") {
+          fs.rmSync(file);
+        }
+      });
+    });
+
+    it("should correctly create witness", async () => {
+      const circuitName = "Multiplier";
+      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+        circuitName,
+        circuitArtifactsPath,
+        verifierDirPath: getVerifiersDirFullPath(),
+      });
+
+      const b = 10,
+        a = 20;
+
+      await multiplierCircuit.createWitness({ a, b });
+
+      const expectedWitnessFilePath = path.join(circuitArtifactsPath, `${circuitName}.wtns`);
+
+      expect(fs.existsSync(expectedWitnessFilePath)).to.be.true;
     });
   });
 
