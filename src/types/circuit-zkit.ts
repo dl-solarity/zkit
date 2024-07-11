@@ -14,7 +14,7 @@ export type Calldata = [
   [NumericString, NumericString],
   [[NumericString, NumericString], [NumericString, NumericString]],
   [NumericString, NumericString],
-  [NumericString],
+  PublicSignals,
 ];
 
 export type ProofStruct = {
@@ -28,7 +28,7 @@ export type InputLike = NumberLike | ArrayLike;
 
 export type Inputs = Record<string, InputLike>;
 
-export type ArtifactsFileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm" | "wtns";
+export type ArtifactsFileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm";
 export type VerifierTemplateType = "groth16";
 
 export type CircuitZKitConfig = {
