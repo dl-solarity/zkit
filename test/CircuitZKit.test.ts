@@ -121,6 +121,40 @@ describe("CircuitZKit", () => {
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
 
+    it("should correctly create verifier and verify proof", async function () {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
+
+      await multiplierCircuit.createVerifier();
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const proof = await multiplierCircuit.generateProof({
+        a: 10,
+        b: 20,
+      });
+
+      expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+
+      const data = await multiplierCircuit.generateCalldata(proof);
+
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierVerifier");
+
+      const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(...data)).to.be.true;
+    });
+
     it("should correctly create verifier several times", async () => {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
