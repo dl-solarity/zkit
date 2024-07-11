@@ -48,10 +48,10 @@ contract <%=verifier_id%> {
     uint16 public constant P_LAST_MEM = 896;
 
     function verifyProof(
-        uint256[2] calldata pA_,
-        uint256[2][2] calldata pB_,
-        uint256[2] calldata pC_,
-        uint256[<%=IC.length-1%>] calldata pubSignals_
+        uint256[2] memory pA_,
+        uint256[2][2] memory pB_,
+        uint256[2] memory pC_,
+        uint256[<%=IC.length-1%>] memory pubSignals_
     ) public view returns (bool) {
         assembly {
             function checkField(v) {
@@ -96,21 +96,21 @@ contract <%=verifier_id%> {
                 mstore(add(pVk_, 32), IC0_Y)
 
                 /// @dev Compute the linear combination vk_x
-                <% for (let i = 1; i <= nPublic; i++) { %>g1MulAccC(pVk_, IC<%=i%>_X, IC<%=i%>_Y, calldataload(add(pubSignals, <%=(i-1)*32%>)))
+                <% for (let i = 1; i <= nPublic; i++) { %>g1MulAccC(pVk_, IC<%=i%>_X, IC<%=i%>_Y, mload(add(pubSignals, <%=(i-1)*32%>)))
                 <% } -%>
 
                 /// @dev -A
-                mstore(pPairing_, calldataload(pA))
+                mstore(pPairing_, mload(pA))
                 mstore(
                     add(pPairing_, 32),
-                    mod(sub(BASE_FIELD_SIZE, calldataload(add(pA, 32))), BASE_FIELD_SIZE)
+                    mod(sub(BASE_FIELD_SIZE, mload(add(pA, 32))), BASE_FIELD_SIZE)
                 )
 
                 /// @dev B
-                mstore(add(pPairing_, 64), calldataload(pB))
-                mstore(add(pPairing_, 96), calldataload(add(pB, 32)))
-                mstore(add(pPairing_, 128), calldataload(add(pB, 64)))
-                mstore(add(pPairing_, 160), calldataload(add(pB, 96)))
+                mstore(add(pPairing_, 64), mload(mload(pB)))
+                mstore(add(pPairing_, 96), mload(add(mload(pB), 32)))
+                mstore(add(pPairing_, 128), mload(mload(add(pB, 32))))
+                mstore(add(pPairing_, 160), mload(add(mload(add(pB, 32)), 32)))
 
                 /// @dev alpha1
                 mstore(add(pPairing_, 192), ALPHA_X)
@@ -133,8 +133,8 @@ contract <%=verifier_id%> {
                 mstore(add(pPairing_, 544), GAMMA_Y2)
 
                 /// @dev C
-                mstore(add(pPairing_, 576), calldataload(pC))
-                mstore(add(pPairing_, 608), calldataload(add(pC, 32)))
+                mstore(add(pPairing_, 576), mload(pC))
+                mstore(add(pPairing_, 608), mload(add(pC, 32)))
 
                 /// @dev delta2
                 mstore(add(pPairing_, 640), DELTA_X1)
@@ -151,7 +151,7 @@ contract <%=verifier_id%> {
             mstore(0x40, add(pMem_, P_LAST_MEM))
 
             /// @dev Validate that all evaluations ∈ F
-            <% for (let i = 0; i < IC.length; i++) { %>checkField(calldataload(add(pubSignals_, <%=i*32%>)))
+            <% for (let i = 0; i < IC.length; i++) { %>checkField(mload(add(pubSignals_, <%=i*32%>)))
             <% } -%>
 
             /// @dev Validate all evaluations

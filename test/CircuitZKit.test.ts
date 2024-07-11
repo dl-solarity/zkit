@@ -12,32 +12,8 @@ describe("CircuitZKit", () => {
     return path.join(process.cwd(), "zkit", "artifacts", circuitDirSourceName);
   }
 
-  function getArtifactsDirFullPath(): string {
-    return path.join(process.cwd(), "zkit", "artifacts");
-  }
-
   function getVerifiersDirFullPath(): string {
     return path.join(process.cwd(), "contracts", "verifiers");
-  }
-
-  function readDirRecursively(dir: string, callback: (dir: string, file: string) => void): void {
-    if (!fs.existsSync(dir)) {
-      return;
-    }
-
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const entryPath = path.join(dir, entry.name);
-
-      if (entry.isDirectory()) {
-        readDirRecursively(entryPath, callback);
-      }
-
-      if (entry.isFile()) {
-        callback(dir, entryPath);
-      }
-    }
   }
 
   describe("CircuitZKit creation", () => {
@@ -121,6 +97,40 @@ describe("CircuitZKit", () => {
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
 
+    it("should correctly create verifier and verify proof", async function () {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
+
+      await multiplierCircuit.createVerifier();
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const proof = await multiplierCircuit.generateProof({
+        a: 10,
+        b: 20,
+      });
+
+      expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+
+      const data = await multiplierCircuit.generateCalldata(proof);
+
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierVerifier");
+
+      const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(...data)).to.be.true;
+    });
+
     it("should correctly create verifier several times", async () => {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
@@ -164,38 +174,6 @@ describe("CircuitZKit", () => {
       await expect(multiplierCircuit.createVerifier()).to.be.rejectedWith(
         `Expected the file "${invalidVKeyFilePath}" to exist`,
       );
-    });
-  });
-
-  describe("createWitness", () => {
-    useFixtureProject("simple-circuits");
-
-    afterEach("cleanup", async () => {
-      readDirRecursively(getArtifactsDirFullPath(), (_dir: string, file: string) => {
-        if (path.extname(file) == ".wtns") {
-          fs.rmSync(file);
-        }
-      });
-    });
-
-    it("should correctly create witness", async () => {
-      const circuitName = "Multiplier";
-      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
-
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
-        circuitName,
-        circuitArtifactsPath,
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
-
-      const b = 10,
-        a = 20;
-
-      await multiplierCircuit.createWitness({ a, b });
-
-      const expectedWitnessFilePath = path.join(circuitArtifactsPath, `${circuitName}.wtns`);
-
-      expect(fs.existsSync(expectedWitnessFilePath)).to.be.true;
     });
   });
 
