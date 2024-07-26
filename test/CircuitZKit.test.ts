@@ -1,6 +1,7 @@
 import ejs from "ejs";
-import path from "path";
 import fs from "fs";
+import * as os from "os";
+import path from "path";
 
 import { expect } from "chai";
 import { useFixtureProject } from "./helpers";
@@ -174,6 +175,31 @@ describe("CircuitZKit", () => {
       await expect(multiplierCircuit.createVerifier()).to.be.rejectedWith(
         `Expected the file "${invalidVKeyFilePath}" to exist`,
       );
+    });
+  });
+
+  describe("createVerifier", () => {
+    useFixtureProject("simple-circuits");
+
+    it("should correctly create witness", async () => {
+      const circuitName = "Multiplier";
+      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+        circuitName,
+        circuitArtifactsPath,
+        verifierDirPath: getVerifiersDirFullPath(),
+      });
+
+      const b = 10,
+        a = 20;
+
+      const tmpDir = path.join(os.tmpdir(), ".zkit");
+
+      fs.rmSync(tmpDir, { force: true, recursive: true });
+
+      expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
+      expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
     });
   });
 

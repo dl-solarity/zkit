@@ -1,5 +1,6 @@
 import ejs from "ejs";
 import fs from "fs";
+import * as os from "os";
 import path from "path";
 import * as snarkjs from "snarkjs";
 
@@ -52,6 +53,27 @@ export class CircuitZKit {
     const verifierCode = ejs.render(verifierTemplate, templateParams);
 
     fs.writeFileSync(verifierFilePath, verifierCode, "utf-8");
+  }
+
+  /**
+   * Calculates a witness for the given inputs.
+   *
+   * @param {Inputs} inputs - The inputs for the circuit.
+   * @returns {Promise<bigint[]>} The generated witness.
+   */
+  public async calculateWitness(inputs: Inputs): Promise<bigint[]> {
+    const tmpDir = path.join(os.tmpdir(), ".zkit");
+
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+
+    const wtnsFile = path.join(tmpDir, `${this.getCircuitName()}.wtns`);
+    const wasmFile = this.mustGetArtifactsFilePath("wasm");
+
+    await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
+
+    return (await snarkjs.wtns.exportJson(wtnsFile)) as bigint[];
   }
 
   /**
