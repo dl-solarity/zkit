@@ -8,7 +8,7 @@ import {
   ArtifactsFileType,
   Calldata,
   CircuitZKitConfig,
-  Inputs,
+  Signal,
   ProofStruct,
   VerifierTemplateType,
 } from "../types/circuit-zkit";
@@ -58,10 +58,10 @@ export class CircuitZKit {
   /**
    * Calculates a witness for the given inputs.
    *
-   * @param {Inputs} inputs - The inputs for the circuit.
+   * @param {Record<string, Signal>} inputs - The inputs for the circuit.
    * @returns {Promise<bigint[]>} The generated witness.
    */
-  public async calculateWitness(inputs: Inputs): Promise<bigint[]> {
+  public async calculateWitness(inputs: Record<string, Signal>): Promise<bigint[]> {
     const tmpDir = path.join(os.tmpdir(), ".zkit");
 
     if (!fs.existsSync(tmpDir)) {
@@ -81,11 +81,11 @@ export class CircuitZKit {
    *
    * @dev The `inputs` should be in the same order as the circuit expects them.
    *
-   * @param {Inputs} inputs - The inputs for the circuit.
+   * @param {Record<string, Signal>} inputs - The inputs for the circuit.
    * @returns {Promise<ProofStruct>} The generated proof.
    * @todo Add support for other proving systems.
    */
-  public async generateProof(inputs: Inputs): Promise<ProofStruct> {
+  public async generateProof(inputs: Record<string, Signal>): Promise<ProofStruct> {
     const zKeyFile = this.mustGetArtifactsFilePath("zkey");
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
