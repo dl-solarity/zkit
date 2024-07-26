@@ -23,7 +23,9 @@ export type ProofStruct = {
 };
 
 export type NumberLike = number | bigint | `${number}`;
-export type Signal = NumberLike | Signal[];
+export type ArrayLike = NumberLike[] | ArrayLike[];
+export type SignalLike = NumberLike | ArrayLike;
+export type Signals = Record<string, SignalLike>;
 
 export type ArtifactsFileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm";
 export type VerifierTemplateType = "groth16";
