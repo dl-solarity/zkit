@@ -178,7 +178,7 @@ describe("CircuitZKit", () => {
     });
   });
 
-  describe("createVerifier", () => {
+  describe("createWitness", () => {
     useFixtureProject("simple-circuits");
 
     it("should correctly create witness", async () => {
@@ -200,6 +200,7 @@ describe("CircuitZKit", () => {
 
       expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
       expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
+      expect(await multiplierCircuit.calculateWitness({ a, b: 30 })).to.deep.eq([1n, 600n, 20n, 30n]);
     });
   });
 
