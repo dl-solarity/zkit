@@ -178,7 +178,7 @@ describe("CircuitZKit", () => {
     });
   });
 
-  describe("createWitness", () => {
+  describe("calculateWitness", () => {
     useFixtureProject("simple-circuits");
 
     it("should correctly create witness", async () => {
