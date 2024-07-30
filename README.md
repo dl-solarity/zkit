@@ -60,6 +60,15 @@ Creates a Solidity verifier contract on `verifierDirPath` path, which was specif
 await multiplier.createVerifier();
 ```
 
+#### calculateWitness()
+
+Calculates a witness in the `tmp` directory and returns its json representation.
+
+```typescript
+/// witness = [1n, 200n, 20n, 10n]
+const witness = await multiplier.calculateWitness({ a: 10, b: 20 });
+```
+
 #### generateProof()
 
 Generates a proof for the given inputs.
