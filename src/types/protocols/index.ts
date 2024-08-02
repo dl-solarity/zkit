@@ -1,7 +1,7 @@
 import { Groth16ProofStruct, Groth16Calldata } from "./groth16";
 import { PlonkProofStruct, PlonkCalldata } from "./plonk";
 
-import { Inputs } from "../proof-utils";
+import { Signals } from "../proof-utils";
 
 export * from "./groth16";
 export * from "./plonk";
@@ -9,7 +9,7 @@ export * from "./plonk";
 export interface IProtocolImplementer<T extends ProtocolType> {
   createVerifier(circuitName: string, vKeyFilePath: string, verifierFilePath: string): Promise<void>;
 
-  generateProof(inputs: Inputs, zKeyFilePath: string, wasmFilePath: string): Promise<ProofStructByProtocol<T>>;
+  generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<ProofStructByProtocol<T>>;
 
   verifyProof(proof: ProofStructByProtocol<T>, vKeyFilePath: string): Promise<boolean>;
 

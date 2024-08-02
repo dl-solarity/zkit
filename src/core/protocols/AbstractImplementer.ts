@@ -1,8 +1,8 @@
-import ejs from "ejs";
 import fs from "fs";
+import ejs from "ejs";
 import path from "path";
 
-import { Inputs } from "../../types/proof-utils";
+import { Signals } from "../../types/proof-utils";
 import { IProtocolImplementer, ProtocolType, ProofStructByProtocol, CalldataByProtocol } from "../../types/protocols";
 
 export abstract class AbstractProtocolImplementer<T extends ProtocolType> implements IProtocolImplementer<T> {
@@ -22,7 +22,7 @@ export abstract class AbstractProtocolImplementer<T extends ProtocolType> implem
   }
 
   public abstract generateProof(
-    inputs: Inputs,
+    inputs: Signals,
     zKeyFilePath: string,
     wasmFilePath: string,
   ): Promise<ProofStructByProtocol<T>>;

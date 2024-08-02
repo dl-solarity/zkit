@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
+import * as os from "os";
+import * as snarkjs from "snarkjs";
 
 import { ArtifactsFileType, CircuitZKitConfig } from "../types/circuit-zkit";
-import { Inputs } from "../types/proof-utils";
+import { Signals } from "../types/proof-utils";
 import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProtocolType } from "../types/protocols";
 
 /**
@@ -28,15 +30,36 @@ export class CircuitZKit<Type extends ProtocolType> {
   }
 
   /**
+   * Calculates a witness for the given inputs.
+   *
+   * @param {Signals} inputs - The inputs for the circuit.
+   * @returns {Promise<bigint[]>} The generated witness.
+   */
+  public async calculateWitness(inputs: Signals): Promise<bigint[]> {
+    const tmpDir = path.join(os.tmpdir(), ".zkit");
+
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+
+    const wtnsFile = path.join(tmpDir, `${this.getCircuitName()}.wtns`);
+    const wasmFile = this.mustGetArtifactsFilePath("wasm");
+
+    await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
+
+    return (await snarkjs.wtns.exportJson(wtnsFile)) as bigint[];
+  }
+
+  /**
    * Generates a proof for the given inputs.
    *
    * @dev The `inputs` should be in the same order as the circuit expects them.
    *
-   * @param {Inputs} inputs - The inputs for the circuit.
+   * @param {Signals} inputs - The inputs for the circuit.
    * @returns {Promise<ProofStructByProtocol<Type>>} The generated proof.
    * @todo Add support for other proving systems.
    */
-  public async generateProof(inputs: Inputs): Promise<ProofStructByProtocol<Type>> {
+  public async generateProof(inputs: Signals): Promise<ProofStructByProtocol<Type>> {
     const zKeyFile = this.mustGetArtifactsFilePath("zkey");
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
