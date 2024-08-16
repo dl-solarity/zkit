@@ -39,7 +39,7 @@ contract <%=verifier_id%> {
     uint256 public constant DELTA_Y2 =
         <%=vk_delta_2[1][0] -%>;
 
-    <% for (let i=0; i<IC.length; i++) { %>uint256 public constant IC<%=i%>_X =
+    <% for (let i = 0; i < IC.length; i++) { %>uint256 public constant IC<%=i%>_X =
         <%=IC[i][0]%>;
     uint256 public constant IC<%=i%>_Y =
         <%=IC[i][1]%>;
@@ -53,7 +53,7 @@ contract <%=verifier_id%> {
         uint256[2] memory pointA_,
         uint256[2][2] memory pointB_,
         uint256[2] memory pointC_,
-        uint256[<%=IC.length-1%>] memory publicSignals_
+        uint256[<%=IC.length - 1%>] memory publicSignals_
     ) public view returns (bool verified_) {
         assembly {
             function checkField(signal_) -> res_ {
@@ -88,7 +88,7 @@ contract <%=verifier_id%> {
                 mstore(add(pointer_, 32), IC0_Y)
 
                 /// @dev compute the linear combination of public signals
-                <% for (let i = 1; i <= nPublic; i++) { %>if iszero(g1MulAdd(pointer_, IC<%=i%>_X, IC<%=i%>_Y, mload(add(pubSignals_, <%=(i-1)*32%>)))) {
+                <% for (let i = 1; i <= nPublic; i++) { %>if iszero(g1MulAdd(pointer_, IC<%=i%>_X, IC<%=i%>_Y, mload(add(pubSignals_, <%=(i - 1) * 32%>)))) {
                     leave
                 }
                 <% } -%>
@@ -145,7 +145,7 @@ contract <%=verifier_id%> {
 
             /// @dev check that all public signals are in F
             verified_ := 1
-            <% for (let i = 0; i < IC.length; i++) { %>verified_ := and(verified_, checkField(mload(add(publicSignals_, <%=i*32%>))))
+            <% for (let i = 0; i < nPublic; i++) { %>verified_ := and(verified_, checkField(mload(add(publicSignals_, <%=i * 32%>))))
             <% } -%>
 
             /// @dev check pairings
