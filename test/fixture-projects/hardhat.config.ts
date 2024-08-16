@@ -1,6 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 
 import "@nomicfoundation/hardhat-ethers";
+import "@nomiclabs/hardhat-vyper";
 
 const config: HardhatUserConfig = {
   networks: {
@@ -17,6 +18,9 @@ const config: HardhatUserConfig = {
       },
       evmVersion: "paris",
     },
+  },
+  vyper: {
+    version: "0.4.0",
   },
 };
 

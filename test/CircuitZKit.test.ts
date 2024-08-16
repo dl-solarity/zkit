@@ -36,7 +36,7 @@ describe("CircuitZKit", () => {
   });
 
   describe("getTemplate", () => {
-    it("should return correct 'groth16' template", async () => {
+    it("should return correct 'groth16' Solidity template", async () => {
       const groth16TemplatePath: string = path.join(
         __dirname,
         "..",
@@ -46,7 +46,20 @@ describe("CircuitZKit", () => {
         "verifier_groth16.sol.ejs",
       );
 
-      expect(CircuitZKit.getTemplate("groth16")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
+      expect(CircuitZKit.getTemplate("groth16", "sol")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
+    });
+
+    it("should return correct 'groth16' Vyper template", async () => {
+      const groth16TemplatePath: string = path.join(
+        __dirname,
+        "..",
+        "src",
+        "core",
+        "templates",
+        "verifier_groth16.vy.ejs",
+      );
+
+      expect(CircuitZKit.getTemplate("groth16", "vy")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
     });
 
     it("should get exception if pass invalid template type", async () => {
@@ -55,7 +68,7 @@ describe("CircuitZKit", () => {
       const invalidTemplate = "fflonk";
 
       expect(function () {
-        circuitZKit.getTemplate(invalidTemplate);
+        circuitZKit.getTemplate(invalidTemplate, "sol");
       }).to.throw(`Ambiguous template type: ${invalidTemplate}.`);
     });
   });
@@ -67,7 +80,7 @@ describe("CircuitZKit", () => {
       fs.rmSync(getVerifiersDirFullPath(), { recursive: true, force: true });
     });
 
-    it("should correctly create verifier file", async () => {
+    it("should correctly create verifier Solidity file", async () => {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
@@ -84,21 +97,52 @@ describe("CircuitZKit", () => {
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.false;
 
-      await multiplierCircuit.createVerifier();
+      await multiplierCircuit.createVerifier("solidity");
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
       const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.vkey.json`);
       expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(expectedVKeyFilePath);
 
-      const template = CircuitZKit.getTemplate("groth16");
+      const template = CircuitZKit.getTemplate("groth16", "sol");
       const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
       templateParams["verifier_id"] = multiplierCircuit.getVerifierName();
 
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
 
-    it("should correctly create verifier and verify proof", async function () {
+    it("should correctly create verifier Vyper file", async () => {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}Verifier`);
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.vy`);
+
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.false;
+
+      await multiplierCircuit.createVerifier("vyper");
+
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.vkey.json`);
+      expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(expectedVKeyFilePath);
+
+      const template = CircuitZKit.getTemplate("groth16", "vy");
+      const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
+      templateParams["verifier_id"] = multiplierCircuit.getVerifierName();
+
+      expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
+    });
+
+    it("should correctly create Solidity verifier and verify proof", async function () {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
@@ -111,7 +155,41 @@ describe("CircuitZKit", () => {
 
       const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
 
-      await multiplierCircuit.createVerifier();
+      await multiplierCircuit.createVerifier("solidity");
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const proof = await multiplierCircuit.generateProof({
+        a: 10,
+        b: 20,
+      });
+
+      expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+
+      const data = await multiplierCircuit.generateCalldata(proof);
+
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierVerifier");
+
+      const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(...data)).to.be.true;
+    });
+
+    it("should correctly create Vyper verifier and verify proof", async function () {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.vy`);
+
+      await multiplierCircuit.createVerifier("vyper");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
       await this.hre.run("compile", { quiet: true });
@@ -145,16 +223,16 @@ describe("CircuitZKit", () => {
 
       const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
 
-      await multiplierCircuit.createVerifier();
+      await multiplierCircuit.createVerifier("solidity");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
-      await multiplierCircuit.createVerifier();
+      await multiplierCircuit.createVerifier("solidity");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
       const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.vkey.json`);
       expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(expectedVKeyFilePath);
 
-      const template = CircuitZKit.getTemplate("groth16");
+      const template = CircuitZKit.getTemplate("groth16", "sol");
       const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
       templateParams["verifier_id"] = multiplierCircuit.getVerifierName();
 
@@ -172,7 +250,7 @@ describe("CircuitZKit", () => {
 
       const invalidVKeyFilePath = multiplierCircuit.getArtifactsFilePath("vkey");
 
-      await expect(multiplierCircuit.createVerifier()).to.be.rejectedWith(
+      await expect(multiplierCircuit.createVerifier("solidity")).to.be.rejectedWith(
         `Expected the file "${invalidVKeyFilePath}" to exist`,
       );
     });
@@ -242,7 +320,7 @@ describe("CircuitZKit", () => {
         verifierDirPath: getVerifiersDirFullPath(),
       });
 
-      await multiplierCircuit.createVerifier();
+      await multiplierCircuit.createVerifier("solidity");
 
       await this.hre.run("compile", { quiet: true });
 
