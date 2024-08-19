@@ -1,5 +1,3 @@
-import { languageMap } from "../constants";
-
 export type NumericString = `${number}` | string;
 
 export type PublicSignals = NumericString[];
@@ -30,15 +28,12 @@ export type Signal = NumberLike | ArrayLike;
 export type Signals = Record<string, Signal>;
 
 export type ArtifactsFileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm";
-export type VerifierTemplateType = "groth16";
-
-export type LanguageMap = typeof languageMap;
-export type Language = keyof LanguageMap;
-export type LanguageExtension = LanguageMap[Language];
+export type VerifierProvingSystem = "groth16";
+export type VerifierLanguageType = "sol" | "vy";
 
 export type CircuitZKitConfig = {
   circuitName: string;
   circuitArtifactsPath: string;
   verifierDirPath: string;
-  templateType?: VerifierTemplateType;
+  provingSystem?: VerifierProvingSystem;
 };

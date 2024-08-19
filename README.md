@@ -6,7 +6,7 @@
 **A zero knowledge kit that helps you interact with Circom circuits.**
 
 - Generate and verify ZK proofs with a single line of code.
-- Render optimized Solidity verifiers.
+- Render optimized Solidity | Vyper verifiers.
 - Build and work with ZK witnesses.
 
 ## Installation
@@ -33,7 +33,7 @@ CircuitZKitConfig = {
   circuitName: string;
   circuitArtifactsPath: string;
   verifierDirPath: string;
-  templateType?: VerifierTemplateType;
+  provingSystem?: VerifierProvingSystem;
 };
 ```
 
@@ -41,23 +41,23 @@ This config contains all the information required to work with the circuit, name
 
 - `circuitName` - Name of the circuit file without extension
 - `circuitArtifactsPath` - Full path to compilation artifacts for the desired circuit
-- `verifierDirPath` - Full path to the directory where Solidity verifier file will be generated
-- `templateType` - The type of template that will be used to generate the Solidity verifier contract. Right now only `groth16` is supported
+- `verifierDirPath` - Full path to the directory where Solidity | Vyper verifier file will be generated
+- `provingSystem` - The proving system that will be used to generate the verifier contract. Right now only `groth16` is supported
 
 #### getTemplate()
 
 Static `CircuitZKit` function that returns the contents of a template file by the passed type.
 
 ```typescript
-const templateContent = CircuitZKit.getTemplate("groth16");
+const templateContent = CircuitZKit.getTemplate("groth16", "sol");
 ```
 
 #### createVerifier()
 
-Creates a Solidity verifier contract on `verifierDirPath` path, which was specified in the config.
+Creates a Solidity | Vyper verifier contract on `verifierDirPath` path, which was specified in the config.
 
 ```typescript
-await multiplier.createVerifier();
+await multiplier.createVerifier("sol");
 ```
 
 #### calculateWitness()
@@ -89,7 +89,7 @@ const isValidProof = await multiplier.verifyProof(proof);
 
 #### generateCalldata()
 
-Generates calldata by proof for the Solidity verifier's `verifyProof()` method.
+Generates calldata by proof for the Solidity | Vyper verifier's `verifyProof()` method.
 
 ```typescript
 /// You can use this calldata to call the verifier contract

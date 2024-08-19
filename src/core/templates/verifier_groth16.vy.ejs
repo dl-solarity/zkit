@@ -22,10 +22,15 @@ DELTA_Y1: constant(uint256) = <%=vk_delta_2[1][1]%>
 DELTA_Y2: constant(uint256) = <%=vk_delta_2[1][0] -%>
 
 
-<% for (let i = 0; i < IC.length; i++) { %>IC<%=i%>_X: constant(uint256) = <%=IC[i][0]%>
-IC<%=i%>_Y: constant(uint256) = <%=IC[i][1]%>
-<% } -%>
+IC: constant(uint256[<%=IC.length%>][2]) = [
+<% IC.forEach(function(innerArray, index) { %>  [
+    <%= innerArray[0] %>,
+    <%= innerArray[1] %>
+  ]<%= index < IC.length - 1 ? ',' : '' %>
+<% }); %>]
 
+EC_ADD_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000006
+EC_MUL_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000007
 EC_PAIRING_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000008
 
 
@@ -33,9 +38,9 @@ EC_PAIRING_PRECOMPILED_ADDRESS: constant(address) = 0x00000000000000000000000000
 @external
 def verifyProof(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], publicSignals: uint256[<%=IC.length-1%>]) -> bool:
     # @dev check that all public signals are in F
-    <% for (let i = 0; i < nPublic; i++) { %>if publicSignals[<%=i%>] >= BASE_FIELD_SIZE:
-        return False
-    <% } -%>
+    for signal: uint256 in publicSignals:
+        if signal >= BASE_FIELD_SIZE:
+            return False
 
     return self._checkPairing(pointA, pointB, pointC, publicSignals)
 
@@ -43,30 +48,51 @@ def verifyProof(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], p
 @view
 @internal
 def _g1MulAdd(pR: uint256[2], pP: uint256[2], s: uint256) -> (bool, uint256[2]):
-    pS: uint256[2] = ecmul(pP, s)
+    success: bool = True
+    response: Bytes[64] = b""
+    success, response = raw_call(
+        EC_MUL_PRECOMPILED_ADDRESS,
+        abi_encode(pP, s),
+        max_outsize=64,
+        is_static_call=True,
+        revert_on_failure=False
+    )
 
-    if pS[0] == 0 and pS[1] == 0:
+    if not success:
         return (False, [0, 0])
 
-    finalPoint: uint256[2] = ecadd(pR, pS)
+    x: uint256 = convert(slice(response, 0, 32), uint256)
+    y: uint256 = convert(slice(response, 32, 32), uint256)
+    pS: uint256[2] = [x, y]
 
-    if finalPoint[0] == 0 and finalPoint[1] == 0:
+    success, response = raw_call(
+        EC_ADD_PRECOMPILED_ADDRESS,
+        abi_encode(pR, pS),
+        max_outsize=64,
+        is_static_call=True,
+        revert_on_failure=False
+    )
+
+    if not success:
         return (False, [0, 0])
 
-    return (True, finalPoint)
+    x = convert(slice(response, 0, 32), uint256)
+    y = convert(slice(response, 32, 32), uint256)
+
+    return (True, [x, y])
 
 
 @view
 @internal
 def _checkPairing(pA: uint256[2], pB: uint256[2][2], pC: uint256[2], pubSignals: uint256[<%=IC.length-1%>]) -> bool:
     success: bool = True
-    mulAddResult: uint256[2] = [IC0_X, IC0_Y]
+    mulAddResult: uint256[2] = IC[0]
 
     # @dev compute the linear combination of public signals
-    <% for (let i = 1; i <= nPublic; i++) { %>success, mulAddResult = self._g1MulAdd(mulAddResult, [IC<%=i%>_X, IC<%=i%>_Y], pubSignals[<%=i-1%>])
-    if not success:
-        return False
-    <% } -%>
+    for i: uint256 in range(1, <%=IC.length%>):
+        success, mulAddResult = self._g1MulAdd(mulAddResult, IC[i], pubSignals[i - 1])
+        if not success:
+            return False
 
     response: Bytes[32] = b""
     success, response = raw_call(

@@ -31,7 +31,7 @@ describe("CircuitZKit", () => {
 
       expect(multiplierCircuit.getCircuitName()).to.be.eq(circuitName);
       expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}Verifier`);
-      expect(multiplierCircuit.getTemplateType()).to.be.eq("groth16");
+      expect(multiplierCircuit.getProvingSystem()).to.be.eq("groth16");
     });
   });
 
@@ -97,7 +97,7 @@ describe("CircuitZKit", () => {
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.false;
 
-      await multiplierCircuit.createVerifier("solidity");
+      await multiplierCircuit.createVerifier("sol");
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
@@ -128,7 +128,7 @@ describe("CircuitZKit", () => {
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.false;
 
-      await multiplierCircuit.createVerifier("vyper");
+      await multiplierCircuit.createVerifier("vy");
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
@@ -155,7 +155,7 @@ describe("CircuitZKit", () => {
 
       const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
 
-      await multiplierCircuit.createVerifier("solidity");
+      await multiplierCircuit.createVerifier("sol");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
       await this.hre.run("compile", { quiet: true });
@@ -189,7 +189,7 @@ describe("CircuitZKit", () => {
 
       const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.vy`);
 
-      await multiplierCircuit.createVerifier("vyper");
+      await multiplierCircuit.createVerifier("vy");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
       await this.hre.run("compile", { quiet: true });
@@ -223,10 +223,10 @@ describe("CircuitZKit", () => {
 
       const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
 
-      await multiplierCircuit.createVerifier("solidity");
+      await multiplierCircuit.createVerifier("sol");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
-      await multiplierCircuit.createVerifier("solidity");
+      await multiplierCircuit.createVerifier("sol");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
       const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.vkey.json`);
@@ -250,7 +250,7 @@ describe("CircuitZKit", () => {
 
       const invalidVKeyFilePath = multiplierCircuit.getArtifactsFilePath("vkey");
 
-      await expect(multiplierCircuit.createVerifier("solidity")).to.be.rejectedWith(
+      await expect(multiplierCircuit.createVerifier("sol")).to.be.rejectedWith(
         `Expected the file "${invalidVKeyFilePath}" to exist`,
       );
     });
@@ -320,7 +320,7 @@ describe("CircuitZKit", () => {
         verifierDirPath: getVerifiersDirFullPath(),
       });
 
-      await multiplierCircuit.createVerifier("solidity");
+      await multiplierCircuit.createVerifier("sol");
 
       await this.hre.run("compile", { quiet: true });
 
