@@ -62,14 +62,14 @@ describe("CircuitZKit", () => {
       expect(CircuitZKit.getTemplate("groth16", "vy")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
     });
 
-    it("should get exception if pass invalid template type", async () => {
+    it("should get exception if pass invalid proving system", async () => {
       const circuitZKit: any = CircuitZKit;
 
       const invalidTemplate = "fflonk";
 
       expect(function () {
         circuitZKit.getTemplate(invalidTemplate, "sol");
-      }).to.throw(`Ambiguous template type: ${invalidTemplate}.`);
+      }).to.throw(`Ambiguous proving system: ${invalidTemplate}.`);
     });
   });
 
