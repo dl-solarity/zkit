@@ -10,7 +10,8 @@ import {
   CircuitZKitConfig,
   Signals,
   ProofStruct,
-  VerifierTemplateType,
+  VerifierProvingSystem,
+  VerifierLanguageType,
 } from "../types/circuit-zkit";
 
 /**
@@ -20,28 +21,29 @@ export class CircuitZKit {
   constructor(private readonly _config: CircuitZKitConfig) {}
 
   /**
-   * Returns the Solidity verifier template for the specified proving system.
+   * Returns the verifier template for the specified proving system and contract language.
    *
-   * @param {VerifierTemplateType} templateType - The template type.
-   * @returns {string} The Solidity verifier template.
+   * @param {VerifierProvingSystem} provingSystem - The template proving system.
+   * @param {VerifierLanguageType} fileExtension - The file extension.
+   * @returns {string} The verifier template.
    */
-  public static getTemplate(templateType: VerifierTemplateType): string {
-    switch (templateType) {
+  public static getTemplate(provingSystem: VerifierProvingSystem, fileExtension: VerifierLanguageType): string {
+    switch (provingSystem) {
       case "groth16":
-        return fs.readFileSync(path.join(__dirname, "templates", "verifier_groth16.sol.ejs"), "utf8");
+        return fs.readFileSync(path.join(__dirname, "templates", `verifier_groth16.${fileExtension}.ejs`), "utf8");
       default:
-        throw new Error(`Ambiguous template type: ${templateType}.`);
+        throw new Error(`Ambiguous proving system: ${provingSystem}.`);
     }
   }
 
   /**
-   * Creates a Solidity verifier contract.
+   * Creates a verifier contract for the specified contract language.
    */
-  public async createVerifier(): Promise<void> {
+  public async createVerifier(languageExtension: VerifierLanguageType): Promise<void> {
     const vKeyFilePath: string = this.mustGetArtifactsFilePath("vkey");
-    const verifierFilePath = path.join(this._config.verifierDirPath, `${this.getVerifierName()}.sol`);
+    const verifierFilePath = path.join(this._config.verifierDirPath, `${this.getVerifierName()}.${languageExtension}`);
 
-    const verifierTemplate: string = CircuitZKit.getTemplate(this.getTemplateType());
+    const verifierTemplate: string = CircuitZKit.getTemplate(this.getProvingSystem(), languageExtension);
 
     if (!fs.existsSync(this._config.verifierDirPath)) {
       fs.mkdirSync(this._config.verifierDirPath, { recursive: true });
@@ -141,12 +143,12 @@ export class CircuitZKit {
   }
 
   /**
-   * Returns the type of verifier template that was stored in the config
+   * Returns the proving system of verifier template that was stored in the config
    *
-   * @returns {VerifierTemplateType} The verifier template type.
+   * @returns {VerifierProvingSystem} The verifier proving system.
    */
-  public getTemplateType(): VerifierTemplateType {
-    return this._config.templateType ?? "groth16";
+  public getProvingSystem(): VerifierProvingSystem {
+    return this._config.provingSystem ?? "groth16";
   }
 
   /**
