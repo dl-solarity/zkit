@@ -12,6 +12,8 @@ import {
   ProofStruct,
   VerifierProvingSystem,
   VerifierLanguageType,
+  PublicSignalInfo,
+  ArtifactSignal,
 } from "../types/circuit-zkit";
 
 /**
@@ -51,6 +53,7 @@ export class CircuitZKit {
 
     const templateParams = JSON.parse(fs.readFileSync(vKeyFilePath, "utf-8"));
     templateParams["verifier_id"] = this.getVerifierName();
+    templateParams["signals"] = this.getPublicSignalsInfo();
 
     const verifierCode = ejs.render(verifierTemplate, templateParams);
 
@@ -192,8 +195,11 @@ export class CircuitZKit {
       case "sym":
         fileName = `${circuitName}.sym`;
         break;
-      case "json":
+      case "constraints":
         fileName = `${circuitName}_constraints.json`;
+        break;
+      case "artifacts":
+        fileName = `${circuitName}_artifacts.json`;
         break;
       case "wasm":
         fileName = `${circuitName}.wasm`;
@@ -204,5 +210,37 @@ export class CircuitZKit {
     }
 
     return path.join(fileDir, fileName);
+  }
+
+  public getPublicSignalsInfo(): Array<PublicSignalInfo> {
+    const artifactsFilePath: string = this.mustGetArtifactsFilePath("artifacts");
+    const artifacts = JSON.parse(fs.readFileSync(artifactsFilePath, "utf-8"));
+
+    const signals = artifacts.baseCircuitInfo?.signals;
+
+    if (signals) {
+      const publicInputs = signals
+        .filter((signal: ArtifactSignal) => signal.type === "Input" && signal.visibility === "Public")
+        .map((signal: ArtifactSignal) => ({
+          name: signal.name,
+          dimension: [...signal.dimension].reverse(),
+        }));
+
+      const outputSignals = signals.filter((signal: ArtifactSignal) => signal.type === "Output");
+
+      const calculateDimensionSize = (dimensions: string[]): number => {
+        return dimensions.length === 0 ? 1 : dimensions.reduce((acc, dim) => acc * parseInt(dim, 10), 1);
+      };
+
+      const totalOutputSize = outputSignals
+        .map((signal: ArtifactSignal) => calculateDimensionSize(signal.dimension))
+        .reduce((total: number, size: number) => total + size, 0);
+
+      const output: PublicSignalInfo = { name: "output", dimension: [totalOutputSize.toString()] };
+
+      return [output, ...publicInputs];
+    }
+
+    return [];
   }
 }

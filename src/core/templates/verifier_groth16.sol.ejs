@@ -48,7 +48,25 @@ contract <%=verifier_id%> {
     /// @dev memory pointer sizes
     uint16 public constant P_PUBLIC_SIGNALS_ACCUMULATOR_SIZE = 128;
     uint16 public constant P_TOTAL_SIZE = 896;
+    <%function generateType(dimension) {
+        if (dimension.length === 0) {
+            return 'uint256';
+        } else {
+            return 'uint256' + dimension.map(d => `[${d}]`).join('');
+        }
+    }
 
+    if (signals.length > 0) {
+        const structFields = signals
+                .map(signal => {
+                    return `${generateType(signal.dimension)} ${signal.name};`
+                })
+                .join('\n        ');
+    %>
+    struct PubSignals {
+        <%= structFields %>
+    }
+    <% } %>
     function verifyProof(
         uint256[2] memory pointA_,
         uint256[2][2] memory pointB_,
@@ -153,5 +171,161 @@ contract <%=verifier_id%> {
                 verified_ := checkPairing(pointA_, pointB_, pointC_, publicSignals_, pointer_)
             }
         }
-    }
+    } <%if (signals.length > 0) {%>
+
+    function verifyProofWithStruct(
+        uint256[2] memory pointA_,
+        uint256[2][2] memory pointB_,
+        uint256[2] memory pointC_,
+        PubSignals memory publicSignals_
+    ) public view returns (bool verified_) {
+        assembly {
+            <%
+            const globalIndent = '    '.repeat(4);
+
+            function generateLoops(dimensions, pointerVars, depth = 0, indexVars = []) {
+                let code = '';
+                let indent = '    '.repeat(depth + 1) + '    '.repeat(3);
+
+                let dimVar = `dim${depth}`;
+                let pointerVar = `arrayPntrLvl${depth}_`;
+                indexVars.push(dimVar);
+
+                code += `${indent}for { let ${dimVar} := 0 } lt(${dimVar}, ${dimensions[depth]}) { ${dimVar} := add(${dimVar}, 1) } {\n`;
+
+                if (depth === dimensions.length - 1) {
+                    code += `${indent}    mstore(add(pointer_, currentOffset), mload(add(${pointerVars[pointerVars.length - 1]}, mul(${dimVar}, 32))))\n`;
+                    code += `${indent}    currentOffset := add(currentOffset, 32)\n`;
+                } else {
+                    pointerVars.push(pointerVar);
+
+                    code += `${indent}    let ${pointerVar} := mload(add(${pointerVars[depth]}, mul(${dimVar}, 32)))\n\n`;
+                    code += generateLoops(dimensions, pointerVars, depth + 1, indexVars);
+                }
+                code += `${indent}}\n`;
+
+                return code;
+            }
+
+            let linearizeCode = 'let currentOffset := 0\n';
+
+            for (let i = 0; i < signals.length; i++) {
+                linearizeCode += `\n${globalIndent}// ${signals[i].name}\n`;
+
+                if (signals[i].dimension.length) {
+                    linearizeCode += `${globalIndent}let ${signals[i].name}Ptr_ := mload(add(pubSignals_, ${i * 32}))\n`;
+
+                    linearizeCode += generateLoops(signals[i].dimension.reverse(), [`${signals[i].name}Ptr_`]);
+                } else {
+                    linearizeCode += `${globalIndent}mstore(add(pointer_, currentOffset), mload(add(pubSignals_, ${i * 32})))\n`;
+                    linearizeCode += `${globalIndent}currentOffset := add(currentOffset, 32)\n`;
+                }
+            }
+
+            %>function linearizePubSignals(pubSignals_, pointer_) {
+                <%= linearizeCode %>            }
+
+            function checkField(signal_) -> res_ {
+                res_ := lt(signal_, BASE_FIELD_SIZE)
+            }
+
+            function g1MulAdd(pR_, x_, y_, s_) -> res_ {
+                let pointer_ := mload(64) // free pointer
+
+                mstore(pointer_, x_)
+                mstore(add(pointer_, 32), y_)
+                mstore(add(pointer_, 64), s_)
+
+                res_ := staticcall(sub(gas(), 2000), 7, pointer_, 96, pointer_, 64) // ecMul
+                res_ := and(res_, gt(returndatasize(), 0)) // check that multiplication succeeded
+
+                if iszero(res_) {
+                    leave
+                }
+
+                mstore(add(pointer_, 64), mload(pR_))
+                mstore(add(pointer_, 96), mload(add(pR_, 32)))
+
+                res_ := staticcall(sub(gas(), 2000), 6, pointer_, 128, pR_, 64) // ecAdd
+                res_ := and(res_, gt(returndatasize(), 0)) // check that addition succeeded
+            }
+
+            function checkPairing(pA_, pB_, pC_, pubSignals_, pointer_) -> res_ {
+                let pPairing_ := add(pointer_, P_PUBLIC_SIGNALS_ACCUMULATOR_SIZE)
+
+                mstore(pointer_, IC0_X)
+                mstore(add(pointer_, 32), IC0_Y)
+
+                /// @dev compute the linear combination of public signals
+                <% for (let i = 1; i <= nPublic; i++) { %>if iszero(g1MulAdd(pointer_, IC<%=i%>_X, IC<%=i%>_Y, mload(add(pubSignals_, <%=(i-1)*32%>)))) {
+                    leave
+                }
+                <% } -%>
+
+                /// @dev -A
+                mstore(pPairing_, mload(pA_))
+                mstore(
+                    add(pPairing_, 32),
+                    mod(sub(BASE_FIELD_SIZE, mload(add(pA_, 32))), BASE_FIELD_SIZE)
+                )
+
+                /// @dev B
+                mstore(add(pPairing_, 64), mload(mload(pB_)))
+                mstore(add(pPairing_, 96), mload(add(mload(pB_), 32)))
+                mstore(add(pPairing_, 128), mload(mload(add(pB_, 32))))
+                mstore(add(pPairing_, 160), mload(add(mload(add(pB_, 32)), 32)))
+
+                /// @dev alpha1
+                mstore(add(pPairing_, 192), ALPHA_X)
+                mstore(add(pPairing_, 224), ALPHA_Y)
+
+                /// @dev beta2
+                mstore(add(pPairing_, 256), BETA_X1)
+                mstore(add(pPairing_, 288), BETA_X2)
+                mstore(add(pPairing_, 320), BETA_Y1)
+                mstore(add(pPairing_, 352), BETA_Y2)
+
+                /// @dev public signals
+                mstore(add(pPairing_, 384), mload(pointer_))
+                mstore(add(pPairing_, 416), mload(add(pointer_, 32)))
+
+                /// @dev gamma2
+                mstore(add(pPairing_, 448), GAMMA_X1)
+                mstore(add(pPairing_, 480), GAMMA_X2)
+                mstore(add(pPairing_, 512), GAMMA_Y1)
+                mstore(add(pPairing_, 544), GAMMA_Y2)
+
+                /// @dev C
+                mstore(add(pPairing_, 576), mload(pC_))
+                mstore(add(pPairing_, 608), mload(add(pC_, 32)))
+
+                /// @dev delta2
+                mstore(add(pPairing_, 640), DELTA_X1)
+                mstore(add(pPairing_, 672), DELTA_X2)
+                mstore(add(pPairing_, 704), DELTA_Y1)
+                mstore(add(pPairing_, 736), DELTA_Y2)
+
+                res_ := staticcall(sub(gas(), 2000), 8, pPairing_, 768, pPairing_, 32) // ecPairing
+                res_ := and(res_, mload(pPairing_)) // check that pairing succeeded
+            }
+
+            let pointer_ := mload(64) // free pointer
+            mstore(64, add(pointer_, P_TOTAL_SIZE))
+
+            let pubSignalsArray_ := mload(64) // free pointer
+            mstore(64, add(pubSignalsArray_, <%=32 * (IC.length - 1)%>))
+
+            linearizePubSignals(publicSignals_, pubSignalsArray_)
+
+            /// @dev check that all public signals are in F
+            verified_ := 1
+            <% for (let i = 0; i < IC.length; i++) { %>verified_ := and(verified_, checkField(mload(add(publicSignals_, <%=i*32%>))))
+            <% } -%>
+
+            /// @dev check pairings
+            if not(iszero(verified_)) {
+                verified_ := checkPairing(pointA_, pointB_, pointC_, pubSignalsArray_, pointer_)
+            }
+        }
+    } <% } %>
 }

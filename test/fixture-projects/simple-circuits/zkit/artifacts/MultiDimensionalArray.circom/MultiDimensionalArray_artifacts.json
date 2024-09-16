@@ -1,0 +1,75 @@
+{
+  "_format": "hh-zkit-artifacts-1",
+  "circuitTemplateName": "MultiDimensionalArray",
+  "circuitFileName": "MultiDimensionalArray",
+  "circuitSourceName": "circuits/MultiDimensionalArray.circom",
+  "baseCircuitInfo": {
+    "constraintsNumber": 6,
+    "signals": [
+      {
+        "name": "a",
+        "dimension": [
+          "4"
+        ],
+        "type": "Input",
+        "visibility": "Public"
+      },
+      {
+        "name": "b",
+        "dimension": [],
+        "type": "Input",
+        "visibility": "Public"
+      },
+      {
+        "name": "c",
+        "dimension": [
+          "2",
+          "9"
+        ],
+        "type": "Input",
+        "visibility": "Public"
+      },
+      {
+        "name": "out1",
+        "dimension": [],
+        "type": "Output",
+        "visibility": "Public"
+      },
+      {
+        "name": "out2",
+        "dimension": [
+          "2",
+          "2"
+        ],
+        "type": "Output",
+        "visibility": "Public"
+      }
+    ]
+  },
+  "compilerOutputFiles": {
+    "wasm": {
+      "fileSourcePath": "/Users/mariiazhvanko/DistributedLab/circom-lib/zkit/artifacts/circuits/MultiDimensionalArray.circom/MultiDimensionalArray_js/MultiDimensionalArray.wasm",
+      "fileHash": "0d51cea05b97bb9f769f974062f91ec7"
+    },
+    "r1cs": {
+      "fileSourcePath": "/Users/mariiazhvanko/DistributedLab/circom-lib/zkit/artifacts/circuits/MultiDimensionalArray.circom/MultiDimensionalArray.r1cs",
+      "fileHash": "768b49733ca9da3f2f757c1d293ab371"
+    },
+    "sym": {
+      "fileSourcePath": "/Users/mariiazhvanko/DistributedLab/circom-lib/zkit/artifacts/circuits/MultiDimensionalArray.circom/MultiDimensionalArray.sym",
+      "fileHash": "3a0a46e8b7aa5dd94320c2ccb943fc8d"
+    },
+    "json": {
+      "fileSourcePath": "/Users/mariiazhvanko/DistributedLab/circom-lib/zkit/artifacts/circuits/MultiDimensionalArray.circom/MultiDimensionalArray_constraints.json",
+      "fileHash": "587bce7649a55a66e07c1df47e20e51a"
+    },
+    "zkey": {
+      "fileSourcePath": "/Users/mariiazhvanko/DistributedLab/circom-lib/zkit/artifacts/circuits/MultiDimensionalArray.circom/MultiDimensionalArray.zkey",
+      "fileHash": "d0efd1d58820df55f4e5eed93c77ce36"
+    },
+    "vkey": {
+      "fileSourcePath": "/Users/mariiazhvanko/DistributedLab/circom-lib/zkit/artifacts/circuits/MultiDimensionalArray.circom/MultiDimensionalArray.vkey.json",
+      "fileHash": "bb24f1b998a2f35ad87c6c642609785f"
+    }
+  }
+}
