@@ -211,9 +211,13 @@ describe("CircuitZKit", () => {
       const MdArrayVerifierFactory = await this.hre.ethers.getContractFactory("MultiDimensionalArrayVerifier");
       const verifier = await MdArrayVerifierFactory.deploy();
 
-      const output = data[3].slice(0, 5);
+      const out1 = 2;
+      const out2 = [
+        [3, 6],
+        [12, 24],
+      ];
 
-      const calldata = [data[0], data[1], data[2], { output, a, b, c }];
+      const calldata = [data[0], data[1], data[2], { out1, out2, a, b, c }];
 
       expect(await verifier.verifyProofWithStruct(...calldata)).to.be.true;
     });

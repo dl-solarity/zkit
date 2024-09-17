@@ -17,6 +17,16 @@ export type Calldata = [
   PublicSignals,
 ];
 
+export type CircuitArtifacts = {
+  circuitTemplateName: string;
+  circuitFileName: string;
+  circuitSourceName: string;
+  baseCircuitInfo: {
+    constraintsNumber: number;
+    signals: ArtifactSignal[];
+  };
+};
+
 export type ArtifactSignal = {
   name: string;
   dimension: string[];

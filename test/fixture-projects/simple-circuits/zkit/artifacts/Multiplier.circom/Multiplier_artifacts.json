@@ -1,1 +1,10 @@
-{}
+{
+  "_format": "hh-zkit-artifacts-1",
+  "circuitTemplateName": "Multiplier",
+  "circuitFileName": "Multiplier",
+  "circuitSourceName": "circuits/Multiplier.circom",
+  "baseCircuitInfo": {
+    "constraintsNumber": 1,
+    "signals": []
+  }
+}

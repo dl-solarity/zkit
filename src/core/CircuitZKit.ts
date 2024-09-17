@@ -14,6 +14,7 @@ import {
   VerifierLanguageType,
   PublicSignalInfo,
   ArtifactSignal,
+  CircuitArtifacts,
 } from "../types/circuit-zkit";
 
 /**
@@ -214,31 +215,23 @@ export class CircuitZKit {
 
   public getPublicSignalsInfo(): Array<PublicSignalInfo> {
     const artifactsFilePath: string = this.mustGetArtifactsFilePath("artifacts");
-    const artifacts = JSON.parse(fs.readFileSync(artifactsFilePath, "utf-8"));
+    const artifacts: CircuitArtifacts = JSON.parse(fs.readFileSync(artifactsFilePath, "utf-8"));
 
-    const signals = artifacts.baseCircuitInfo?.signals;
+    const signals: ArtifactSignal[] = artifacts.baseCircuitInfo.signals;
 
     if (signals) {
-      const publicInputs = signals
-        .filter((signal: ArtifactSignal) => signal.type === "Input" && signal.visibility === "Public")
-        .map((signal: ArtifactSignal) => ({
-          name: signal.name,
-          dimension: [...signal.dimension].reverse(),
-        }));
+      const getSignals = (signalType: string) =>
+        signals
+          .filter((signal) => signal.type === signalType && signal.visibility === "Public")
+          .map((signal) => ({
+            name: signal.name,
+            dimension: [...signal.dimension].reverse(),
+          }));
 
-      const outputSignals = signals.filter((signal: ArtifactSignal) => signal.type === "Output");
+      const outputSignals = getSignals("Output");
+      const publicInputs = getSignals("Input");
 
-      const calculateDimensionSize = (dimensions: string[]): number => {
-        return dimensions.length === 0 ? 1 : dimensions.reduce((acc, dim) => acc * parseInt(dim, 10), 1);
-      };
-
-      const totalOutputSize = outputSignals
-        .map((signal: ArtifactSignal) => calculateDimensionSize(signal.dimension))
-        .reduce((total: number, size: number) => total + size, 0);
-
-      const output: PublicSignalInfo = { name: "output", dimension: [totalOutputSize.toString()] };
-
-      return [output, ...publicInputs];
+      return [...outputSignals, ...publicInputs];
     }
 
     return [];
