@@ -22,7 +22,7 @@ DELTA_Y1: constant(uint256) = <%=vk_delta_2[1][1]%>
 DELTA_Y2: constant(uint256) = <%=vk_delta_2[1][0] -%>
 
 
-IC: constant(uint256[<%=IC.length%>][2]) = [
+IC: constant(uint256[2][<%=IC.length%>]) = [
 <% IC.forEach(function(innerArray, index) { %>  [
     <%= innerArray[0] %>,
     <%= innerArray[1] %>

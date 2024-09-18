@@ -182,50 +182,63 @@ contract <%=verifier_id%> {
         return verifyProof(pointA_, pointB_, pointC_, _linearizePubSignals(publicSignals_));
     }
 
-    function _linearizePubSignals(PubSignals memory publicSignals_) private pure returns (uint256[28] memory linearizedArray_) {
+    <%
+        const generateLinearizationFunction = (name, dimension, offsetVar) => {
+            if (dimension.length === 0) {
+                return `currentOffset := _linearizeUint(linearizedArray_, currentOffset, add(publicSignals_, ${offsetVar}))`;
+            } else if (dimension.length === 1) {
+                return `currentOffset := _linearize1DArray(linearizedArray_, currentOffset, mload(add(publicSignals_, ${offsetVar})), ${dimension[0]})`;
+            } else {
+                return `currentOffset := _linearize${dimension.length}DArray(linearizedArray_, currentOffset, mload(add(publicSignals_, ${offsetVar})), ${dimension.reverse().join(', ')})`;
+            }
+        };
+
+        const generateHelperFunctions = (maxDimension) => {
+            let helperFunctions = '';
+            const indent = '            ';
+
+            if (maxDimension >= 1) {
+                helperFunctions += `
+            \n${indent}function _linearize1DArray(resultArray_, currentOffset_, ptr_, arrayLength_) -> offset_ {
+                for { let i := 0 } lt(i, arrayLength_) { i := add(i, 1) } {
+                    currentOffset_ := _linearizeUint(resultArray_, currentOffset_, add(ptr_, mul(i, 32)))
+                }
+
+                offset_ := currentOffset_
+            }`;
+            }
+
+            for (let d = 2; d <= maxDimension; d++) {
+                let func = `
+            \n${indent}function _linearize${d}DArray(resultArray_, currentOffset_, ptr_, ${Array.from({ length: d }, (_, i) => `dim${i}Length`).join(', ')}) -> offset_ {
+              for { let i := 0 } lt(i, dim0Length) { i := add(i, 1) } {
+                  let outerArrayPtr_ := mload(add(ptr_, mul(i, 32)))
+                  currentOffset_ := _linearize${d - 1}DArray(resultArray_, currentOffset_, outerArrayPtr_, ${Array.from({ length: d - 1 }, (_, i) => `dim${i + 1}Length`).join(', ')})
+              }
+
+              offset_ := currentOffset_
+            }`;
+                helperFunctions += func;
+            }
+
+            return helperFunctions;
+        };
+
+        const maxDimension = Math.max(...signals.map(signal => signal.dimension.length), 0);
+    %>function _linearizePubSignals(PubSignals memory publicSignals_) private pure returns (uint256[<%= IC.length - 1 %>] memory linearizedArray_) {
         assembly {
-        <%
-        const globalIndent = '    '.repeat(3);
+            let currentOffset := 0
 
-        function generateLoops(dimensions, pointerVars, depth = 0, indexVars = []) {
-            let code = '';
-            let indent = '    '.repeat(depth + 1) + '    '.repeat(2);
+            function _linearizeUint(resultArray_, currentOffset_, valuePtr_) -> offset_ {
+                mstore(add(resultArray_, currentOffset_), mload(valuePtr_))
+                offset_ := add(currentOffset_, 32)
+            }<%- generateHelperFunctions(maxDimension) %><%
+            signals.forEach((signal, index) => {
+                const linearizationCode = generateLinearizationFunction(signal.name, signal.dimension, index * 32);
+            %>
 
-            let dimVar = `dim${depth}`;
-            let pointerVar = `arrayPntrLvl${depth}_`;
-            indexVars.push(dimVar);
-
-            code += `${indent}for { let ${dimVar} := 0 } lt(${dimVar}, ${dimensions[depth]}) { ${dimVar} := add(${dimVar}, 1) } {\n`;
-
-            if (depth === dimensions.length - 1) {
-                code += `${indent}    mstore(add(linearizedArray_, currentOffset), mload(add(${pointerVars[pointerVars.length - 1]}, mul(${dimVar}, 32))))\n`;
-                code += `${indent}    currentOffset := add(currentOffset, 32)\n`;
-            } else {
-                pointerVars.push(pointerVar);
-
-                code += `${indent}    let ${pointerVar} := mload(add(${pointerVars[depth]}, mul(${dimVar}, 32)))\n\n`;
-                code += generateLoops(dimensions, pointerVars, depth + 1, indexVars);
-            }
-            code += `${indent}}\n`;
-
-            return code;
+            // <%= signal.name %>
+            <%= linearizationCode %><%}); %>
         }
-
-        let linearizeCode = '    let currentOffset := 0\n';
-
-        for (let i = 0; i < signals.length; i++) {
-            linearizeCode += `\n${globalIndent}// ${signals[i].name}\n`;
-
-            if (signals[i].dimension.length) {
-                linearizeCode += `${globalIndent}let ${signals[i].name}Ptr_ := mload(add(publicSignals_, ${i * 32}))\n`;
-
-                linearizeCode += generateLoops(signals[i].dimension.reverse(), [`${signals[i].name}Ptr_`]);
-            } else {
-                linearizeCode += `${globalIndent}mstore(add(linearizedArray_, currentOffset), mload(add(publicSignals_, ${i * 32})))\n`;
-                linearizeCode += `${globalIndent}currentOffset := add(currentOffset, 32)\n`;
-            }
-        }
-
-        %><%= linearizeCode %>        }
-    } <% } %>
+    }<% } %>
 }
