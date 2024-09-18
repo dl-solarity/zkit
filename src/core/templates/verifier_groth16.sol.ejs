@@ -50,23 +50,23 @@ contract <%=verifier_id%> {
     uint16 public constant P_TOTAL_SIZE = 896;
     <%function generateType(dimension) {
         if (dimension.length === 0) {
-            return 'uint256';
+            return "uint256";
         } else {
-            return 'uint256' + dimension.map(d => `[${d}]`).join('');
+            return "uint256" + dimension.map(d => `[${d}]`).join("");
         }
     }
 
-    if (signals.length > 0) {
-        const structFields = signals
-                .map(signal => {
-                    return `${generateType(signal.dimension)} ${signal.name};`
-                })
-                .join('\n        ');
-    %>
+    const structFields = signals
+            .map(signal => {
+                return `${generateType(signal.dimension)} ${signal.name};`
+            })
+            .join("\n\t\t");
+    -%>
+
     struct PubSignals {
         <%= structFields %>
     }
-    <% } %>
+
     function verifyProof(
         uint256[2] memory pointA_,
         uint256[2][2] memory pointB_,
@@ -163,15 +163,16 @@ contract <%=verifier_id%> {
 
             /// @dev check that all public signals are in F
             verified_ := 1
-            <% for (let i = 0; i < nPublic; i++) { %>verified_ := and(verified_, checkField(mload(add(publicSignals_, <%=i * 32%>))))
-            <% } -%>
+            for { let i := 0 } lt(i, <%= nPublic %>) { i := add(i, 32) } {
+                verified_ := and(verified_, checkField(mload(add(publicSignals_, i))))
+            }
 
             /// @dev check pairings
             if not(iszero(verified_)) {
                 verified_ := checkPairing(pointA_, pointB_, pointC_, publicSignals_, pointer_)
             }
         }
-    } <%if (signals.length > 0) {%>
+    }
 
     function verifyProofWithStruct(
         uint256[2] memory pointA_,
@@ -189,13 +190,13 @@ contract <%=verifier_id%> {
             } else if (dimension.length === 1) {
                 return `currentOffset := _linearize1DArray(linearizedArray_, currentOffset, mload(add(publicSignals_, ${offsetVar})), ${dimension[0]})`;
             } else {
-                return `currentOffset := _linearize${dimension.length}DArray(linearizedArray_, currentOffset, mload(add(publicSignals_, ${offsetVar})), ${dimension.reverse().join(', ')})`;
+                return `currentOffset := _linearize${dimension.length}DArray(linearizedArray_, currentOffset, mload(add(publicSignals_, ${offsetVar})), ${dimension.reverse().join(", ")})`;
             }
         };
 
         const generateHelperFunctions = (maxDimension) => {
-            let helperFunctions = '';
-            const indent = '            ';
+            let helperFunctions = "";
+            const indent = "\t\t\t";
 
             if (maxDimension >= 1) {
                 helperFunctions += `
@@ -208,15 +209,18 @@ contract <%=verifier_id%> {
             }`;
             }
 
+            const generateDimensionParams = (dimensionsNumber, startIndex = 0) => {
+                return Array.from({ length: dimensionsNumber }, (_, i) => `dim${i + startIndex}Length`).join(", ");
+            }
+
             for (let d = 2; d <= maxDimension; d++) {
                 let func = `
-            \n${indent}function _linearize${d}DArray(resultArray_, currentOffset_, ptr_, ${Array.from({ length: d }, (_, i) => `dim${i}Length`).join(', ')}) -> offset_ {
-              for { let i := 0 } lt(i, dim0Length) { i := add(i, 1) } {
-                  let outerArrayPtr_ := mload(add(ptr_, mul(i, 32)))
-                  currentOffset_ := _linearize${d - 1}DArray(resultArray_, currentOffset_, outerArrayPtr_, ${Array.from({ length: d - 1 }, (_, i) => `dim${i + 1}Length`).join(', ')})
-              }
+            \n${indent}function _linearize${d}DArray(resultArray_, currentOffset_, ptr_, ${generateDimensionParams(d)}) -> offset_ {
+                for { let i := 0 } lt(i, dim0Length) { i := add(i, 1) } {
+                    currentOffset_ := _linearize${d - 1}DArray(resultArray_, currentOffset_, mload(add(ptr_, mul(i, 32))), ${generateDimensionParams(d - 1, 1)})
+                }
 
-              offset_ := currentOffset_
+                offset_ := currentOffset_
             }`;
                 helperFunctions += func;
             }
@@ -224,8 +228,9 @@ contract <%=verifier_id%> {
             return helperFunctions;
         };
 
-        const maxDimension = Math.max(...signals.map(signal => signal.dimension.length), 0);
-    %>function _linearizePubSignals(PubSignals memory publicSignals_) private pure returns (uint256[<%= IC.length - 1 %>] memory linearizedArray_) {
+        const maxDimension = Math.max(...signals.map(signal => signal.dimension.length));
+    -%>
+function _linearizePubSignals(PubSignals memory publicSignals_) private pure returns (uint256[<%= IC.length - 1 %>] memory linearizedArray_) {
         assembly {
             let currentOffset := 0
 
@@ -240,5 +245,5 @@ contract <%=verifier_id%> {
             // <%= signal.name %>
             <%= linearizationCode %><%}); %>
         }
-    }<% } %>
+    }
 }

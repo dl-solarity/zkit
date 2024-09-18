@@ -213,27 +213,30 @@ export class CircuitZKit {
     return path.join(fileDir, fileName);
   }
 
+  /**
+   * Returns the public signals information from the circuit artifacts.
+   *
+   * @dev Dimensions are reversed to align with the declaration order of multidimensional arrays in Solidity and Vyper.
+   *
+   * @returns {Array<PublicSignalInfo>} An array of objects containing the public signal names and their reversed dimensions.
+   */
   public getPublicSignalsInfo(): Array<PublicSignalInfo> {
     const artifactsFilePath: string = this.mustGetArtifactsFilePath("artifacts");
     const artifacts: CircuitArtifacts = JSON.parse(fs.readFileSync(artifactsFilePath, "utf-8"));
 
     const signals: ArtifactSignal[] = artifacts.baseCircuitInfo.signals;
 
-    if (signals) {
-      const getSignals = (signalType: string) =>
-        signals
-          .filter((signal) => signal.type === signalType && signal.visibility === "Public")
-          .map((signal) => ({
-            name: signal.name,
-            dimension: [...signal.dimension].reverse(),
-          }));
+    const getSignals = (signalType: string) =>
+      signals
+        .filter((signal) => signal.type === signalType && signal.visibility === "Public")
+        .map((signal) => ({
+          name: signal.name,
+          dimension: [...signal.dimension].reverse(),
+        }));
 
-      const outputSignals = getSignals("Output");
-      const publicInputs = getSignals("Input");
+    const outputSignals = getSignals("Output");
+    const publicInputs = getSignals("Input");
 
-      return [...outputSignals, ...publicInputs];
-    }
-
-    return [];
+    return [...outputSignals, ...publicInputs];
   }
 }

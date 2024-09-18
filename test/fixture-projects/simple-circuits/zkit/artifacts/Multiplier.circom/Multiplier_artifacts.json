@@ -5,6 +5,13 @@
   "circuitSourceName": "circuits/Multiplier.circom",
   "baseCircuitInfo": {
     "constraintsNumber": 1,
-    "signals": []
+    "signals": [
+      {
+        "name": "out",
+        "dimension": [],
+        "type": "Output",
+        "visibility": "Public"
+      }
+    ]
   }
 }
