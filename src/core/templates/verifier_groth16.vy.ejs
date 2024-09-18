@@ -33,16 +33,89 @@ EC_ADD_PRECOMPILED_ADDRESS: constant(address) = 0x000000000000000000000000000000
 EC_MUL_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000007
 EC_PAIRING_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000008
 
+<%function generateType(dimension) {
+    if (dimension.length === 0) {
+        return "uint256";
+    } else {
+        return "uint256" + dimension.map(d => `[${d}]`).join("");
+    }
+}
+
+const structFields = signals
+        .map(signal => {
+            return `\t${signal.name}: ${generateType(signal.dimension)}`
+        })
+        .join("\n");
+-%>
+struct PubSignals:
+<%= structFields %>
+
 
 @view
 @external
-def verifyProof(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], publicSignals: uint256[<%=IC.length-1%>]) -> bool:
+def verifyProof(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], publicSignals: uint256[<%= IC.length - 1 %>]) -> bool:
+    return self._verifyProof(pointA, pointB, pointC, publicSignals)
+
+
+@view
+@external
+def verifyProofWithStruct(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], publicSignals: PubSignals) -> bool:
+    return self._verifyProof(pointA, pointB, pointC, self._linearizePubSignals(publicSignals))
+
+
+@view
+@internal
+def _verifyProof(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], publicSignals: uint256[<%= IC.length - 1 %>]) -> bool:
     # @dev check that all public signals are in F
     for signal: uint256 in publicSignals:
         if signal >= BASE_FIELD_SIZE:
             return False
 
     return self._checkPairing(pointA, pointB, pointC, publicSignals)
+
+<%
+function generateLoops(dimensions, signalName, depth = 0, indices = []) {
+    let loopCode = '';
+    let indent = '\t'.repeat(depth + 1);
+    let currentIndex = `i_${depth}`;
+
+    if (depth < dimensions.length) {
+        loopCode += `${indent}for ${currentIndex}: uint256 in range(${dimensions[depth]}):\n`;
+
+        indices.push(currentIndex);
+
+        loopCode += generateLoops(dimensions, signalName, depth + 1, indices);
+    } else {
+        let accessExpression = indices.map(idx => `[${idx}]`).join('');
+
+        loopCode += `${indent}linearizedArray[idx] = publicSignals.${signalName}${accessExpression}\n`;
+        loopCode += `${indent}idx += 1\n`;
+    }
+
+    return loopCode;
+}
+
+let linearizeCode = "\tidx: uint256 = 0\n";
+linearizeCode += `\tlinearizedArray: uint256[${nPublic}] = empty(uint256[${nPublic}])\n`;
+
+for (let i = 0; i < signals.length; i++) {
+    linearizeCode += `\n\t# ${signals[i].name}\n`;
+
+    if (signals[i].dimension.length) {
+        linearizeCode += generateLoops(signals[i].dimension.reverse(), signals[i].name);
+    } else {
+        linearizeCode += `\tlinearizedArray[idx] = publicSignals.${signals[i].name}\n`;
+        linearizeCode += `\tidx += 1\n`;
+    }
+}
+
+linearizeCode += "\n\treturn linearizedArray";
+-%>
+
+@view
+@internal
+def _linearizePubSignals(publicSignals: PubSignals) -> uint256[<%= IC.length - 1 %>]:
+<%= linearizeCode %>
 
 
 @view

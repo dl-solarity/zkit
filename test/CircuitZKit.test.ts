@@ -139,6 +139,7 @@ describe("CircuitZKit", () => {
       const template = CircuitZKit.getTemplate("groth16", "vy");
       const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
       templateParams["verifier_id"] = multiplierCircuit.getVerifierName();
+      templateParams["signals"] = multiplierCircuit.getPublicSignalsInfo();
 
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
@@ -254,6 +255,51 @@ describe("CircuitZKit", () => {
       const verifier = await MultiplierVerifierFactory.deploy();
 
       expect(await verifier.verifyProof(...data)).to.be.true;
+    });
+
+    it("should correctly create Vyper verifier and verify proof with public signals struct", async function () {
+      const circuitName = "MultiDimensionalArray";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const mdArrayCircuit: CircuitZKit = new CircuitZKit({
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${mdArrayCircuit.getVerifierName()}.vy`);
+
+      await mdArrayCircuit.createVerifier("vy");
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const a = [77, 32, 1, 90];
+      const b = 1414;
+      const c = [
+        [2, 3, 4, 5, 6, 12, 11, 10, 9],
+        [1, 11, 111, 1111, 1414, 4444, 444, 44, 4],
+      ];
+
+      const proof: any = await mdArrayCircuit.generateProof({ a, b, c });
+
+      expect(await mdArrayCircuit.verifyProof(proof)).to.be.true;
+
+      const data = await mdArrayCircuit.generateCalldata(proof);
+
+      const MdArrayVerifierFactory = await this.hre.ethers.getContractFactory("MultiDimensionalArrayVerifier");
+      const verifier = await MdArrayVerifierFactory.deploy();
+
+      const out1 = 1414;
+      const out2 = [
+        [3, 6],
+        [12, 24],
+      ];
+
+      const calldata = [data[0], data[1], data[2], { out1, out2, a, b, c }];
+
+      expect(await verifier.verifyProofWithStruct(...calldata)).to.be.true;
     });
 
     it("should correctly create verifier several times", async () => {
