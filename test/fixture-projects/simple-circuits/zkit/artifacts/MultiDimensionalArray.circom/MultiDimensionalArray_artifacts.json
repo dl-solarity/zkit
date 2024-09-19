@@ -1,0 +1,49 @@
+{
+  "_format": "hh-zkit-artifacts-1",
+  "circuitTemplateName": "MultiDimensionalArray",
+  "circuitFileName": "MultiDimensionalArray",
+  "circuitSourceName": "circuits/MultiDimensionalArray.circom",
+  "baseCircuitInfo": {
+    "constraintsNumber": 6,
+    "signals": [
+      {
+        "name": "a",
+        "dimension": [
+          "4"
+        ],
+        "type": "Input",
+        "visibility": "Public"
+      },
+      {
+        "name": "b",
+        "dimension": [],
+        "type": "Input",
+        "visibility": "Public"
+      },
+      {
+        "name": "c",
+        "dimension": [
+          "2",
+          "9"
+        ],
+        "type": "Input",
+        "visibility": "Public"
+      },
+      {
+        "name": "out1",
+        "dimension": [],
+        "type": "Output",
+        "visibility": "Public"
+      },
+      {
+        "name": "out2",
+        "dimension": [
+          "2",
+          "2"
+        ],
+        "type": "Output",
+        "visibility": "Public"
+      }
+    ]
+  }
+}

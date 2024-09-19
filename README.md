@@ -56,6 +56,14 @@ const templateContent = CircuitZKit.getTemplate("groth16", "sol");
 
 Creates a Solidity | Vyper verifier contract on `verifierDirPath` path, which was specified in the config.
 
+Two functions are available for proof verification within the contract:
+- `verifyProof`: accepts an array of public inputs for verification.
+- `verifyProofWithStruct`: allows passing public signals as a struct, enabling easier access and typization.
+
+> [!TIP]
+> It’s recommended to create structs using the `{ fieldName: value }` syntax. This ensures that your code 
+> continues to work correctly even if the order of outputs in the circuit changes.
+
 ```typescript
 await multiplier.createVerifier("sol");
 ```

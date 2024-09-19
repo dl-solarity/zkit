@@ -17,6 +17,28 @@ export type Calldata = [
   PublicSignals,
 ];
 
+export type CircuitArtifacts = {
+  circuitTemplateName: string;
+  circuitFileName: string;
+  circuitSourceName: string;
+  baseCircuitInfo: {
+    constraintsNumber: number;
+    signals: ArtifactSignal[];
+  };
+};
+
+export type ArtifactSignal = {
+  name: string;
+  dimension: string[];
+  type: string;
+  visibility: string;
+};
+
+export type PublicSignalInfo = {
+  name: string;
+  dimension: string[];
+};
+
 export type ProofStruct = {
   proof: Groth16Proof;
   publicSignals: PublicSignals;
@@ -27,7 +49,7 @@ export type ArrayLike = NumberLike[] | ArrayLike[];
 export type Signal = NumberLike | ArrayLike;
 export type Signals = Record<string, Signal>;
 
-export type ArtifactsFileType = "r1cs" | "zkey" | "vkey" | "sym" | "json" | "wasm";
+export type ArtifactsFileType = "r1cs" | "zkey" | "vkey" | "sym" | "constraints" | "artifacts" | "wasm";
 export type VerifierProvingSystem = "groth16";
 export type VerifierLanguageType = "sol" | "vy";
 
