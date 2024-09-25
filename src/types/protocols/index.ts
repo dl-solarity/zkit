@@ -2,12 +2,18 @@ import { Groth16ProofStruct, Groth16Calldata } from "./groth16";
 import { PlonkProofStruct, PlonkCalldata } from "./plonk";
 
 import { Signals } from "../proof-utils";
+import { VerifierLanguageType } from "../circuit-zkit";
 
 export * from "./groth16";
 export * from "./plonk";
 
-export interface IProtocolImplementer<T extends ProtocolType> {
-  createVerifier(circuitName: string, vKeyFilePath: string, verifierFilePath: string): Promise<void>;
+export interface IProtocolImplementer<T extends ProvingSystemType> {
+  createVerifier(
+    circuitName: string,
+    vKeyFilePath: string,
+    verifierFilePath: string,
+    languageExtension: VerifierLanguageType,
+  ): Promise<void>;
 
   generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<ProofStructByProtocol<T>>;
 
@@ -15,9 +21,9 @@ export interface IProtocolImplementer<T extends ProtocolType> {
 
   generateCalldata(proof: ProofStructByProtocol<T>): Promise<CalldataByProtocol<T>>;
 
-  getProtocolType(): ProtocolType;
+  getProvingSystemType(): ProvingSystemType;
 
-  getTemplate(): string;
+  getTemplate(fileExtension: VerifierLanguageType): string;
 
   getVerifierName(circuitName: string): string;
 
@@ -26,7 +32,7 @@ export interface IProtocolImplementer<T extends ProtocolType> {
   getVKeyFileName(circuitName: string): string;
 }
 
-export interface ProofStructMap {
+export interface ProvingSystemStructMap {
   groth16: {
     proofStruct: Groth16ProofStruct;
     calldata: Groth16Calldata;
@@ -37,7 +43,7 @@ export interface ProofStructMap {
   };
 }
 
-export type ProtocolType = keyof ProofStructMap;
+export type ProvingSystemType = keyof ProvingSystemStructMap;
 
-export type ProofStructByProtocol<T extends ProtocolType> = ProofStructMap[T]["proofStruct"];
-export type CalldataByProtocol<T extends ProtocolType> = ProofStructMap[T]["calldata"];
+export type ProofStructByProtocol<T extends ProvingSystemType> = ProvingSystemStructMap[T]["proofStruct"];
+export type CalldataByProtocol<T extends ProvingSystemType> = ProvingSystemStructMap[T]["calldata"];

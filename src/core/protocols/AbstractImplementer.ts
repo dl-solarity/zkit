@@ -3,11 +3,22 @@ import ejs from "ejs";
 import path from "path";
 
 import { Signals } from "../../types/proof-utils";
-import { IProtocolImplementer, ProtocolType, ProofStructByProtocol, CalldataByProtocol } from "../../types/protocols";
+import {
+  IProtocolImplementer,
+  ProvingSystemType,
+  ProofStructByProtocol,
+  CalldataByProtocol,
+} from "../../types/protocols";
+import { VerifierLanguageType } from "../../types/circuit-zkit";
 
-export abstract class AbstractProtocolImplementer<T extends ProtocolType> implements IProtocolImplementer<T> {
-  public async createVerifier(circuitName: string, vKeyFilePath: string, verifierFilePath: string): Promise<void> {
-    const verifierTemplate: string = this.getTemplate();
+export abstract class AbstractProtocolImplementer<T extends ProvingSystemType> implements IProtocolImplementer<T> {
+  public async createVerifier(
+    circuitName: string,
+    vKeyFilePath: string,
+    verifierFilePath: string,
+    languageExtension: VerifierLanguageType,
+  ): Promise<void> {
+    const verifierTemplate: string = this.getTemplate(languageExtension);
 
     if (!fs.existsSync(path.dirname(verifierFilePath))) {
       fs.mkdirSync(path.dirname(verifierFilePath), { recursive: true });
@@ -31,26 +42,26 @@ export abstract class AbstractProtocolImplementer<T extends ProtocolType> implem
 
   public abstract generateCalldata(proof: ProofStructByProtocol<T>): Promise<CalldataByProtocol<T>>;
 
-  public abstract getProtocolType(): ProtocolType;
+  public abstract getProvingSystemType(): ProvingSystemType;
 
-  public getTemplate(): string {
+  public getTemplate(languageExtension: VerifierLanguageType): string {
     return fs.readFileSync(
-      path.join(__dirname, "..", "templates", `verifier_${this.getProtocolType()}.sol.ejs`),
+      path.join(__dirname, "..", "templates", `verifier_${this.getProvingSystemType()}.${languageExtension}.ejs`),
       "utf8",
     );
   }
 
   public getVerifierName(circuitName: string): string {
-    const protocolType: ProtocolType = this.getProtocolType();
+    const protocolType: ProvingSystemType = this.getProvingSystemType();
 
     return `${circuitName}${protocolType.charAt(0).toUpperCase() + protocolType.slice(1)}Verifier`;
   }
 
   public getZKeyFileName(circuitName: string): string {
-    return `${circuitName}.${this.getProtocolType()}.zkey`;
+    return `${circuitName}.${this.getProvingSystemType()}.zkey`;
   }
 
   public getVKeyFileName(circuitName: string): string {
-    return `${circuitName}.${this.getProtocolType()}.vkey.json`;
+    return `${circuitName}.${this.getProvingSystemType()}.vkey.json`;
   }
 }

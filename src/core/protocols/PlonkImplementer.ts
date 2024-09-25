@@ -4,7 +4,7 @@ import * as snarkjs from "snarkjs";
 import { AbstractProtocolImplementer } from "./AbstractImplementer";
 
 import { Signals } from "../../types/proof-utils";
-import { PlonkCalldata, PlonkProofStruct, ProtocolType } from "../../types/protocols";
+import { PlonkCalldata, PlonkProofStruct, ProvingSystemType } from "../../types/protocols";
 
 export class PlonkImplementer extends AbstractProtocolImplementer<"plonk"> {
   public async generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<PlonkProofStruct> {
@@ -26,7 +26,7 @@ export class PlonkImplementer extends AbstractProtocolImplementer<"plonk"> {
     ) as PlonkCalldata;
   }
 
-  public getProtocolType(): ProtocolType {
+  public getProvingSystemType(): ProvingSystemType {
     return "plonk";
   }
 }

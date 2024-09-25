@@ -4,7 +4,7 @@ import * as snarkjs from "snarkjs";
 import { AbstractProtocolImplementer } from "./AbstractImplementer";
 
 import { Signals } from "../../types/proof-utils";
-import { Groth16ProofStruct, ProtocolType, Groth16Calldata } from "../../types/protocols";
+import { Groth16ProofStruct, ProvingSystemType, Groth16Calldata } from "../../types/protocols";
 
 export class Groth16Implementer extends AbstractProtocolImplementer<"groth16"> {
   public async generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<Groth16ProofStruct> {
@@ -23,7 +23,7 @@ export class Groth16Implementer extends AbstractProtocolImplementer<"groth16"> {
     return JSON.parse(`[${calldata}]`) as Groth16Calldata;
   }
 
-  public getProtocolType(): ProtocolType {
+  public getProvingSystemType(): ProvingSystemType {
     return "groth16";
   }
 }

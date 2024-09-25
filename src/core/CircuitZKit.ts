@@ -3,30 +3,30 @@ import path from "path";
 import * as os from "os";
 import * as snarkjs from "snarkjs";
 
-import { ArtifactsFileType, CircuitZKitConfig } from "../types/circuit-zkit";
+import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
 import { Signals } from "../types/proof-utils";
-import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProtocolType } from "../types/protocols";
+import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
  */
-export class CircuitZKit<Type extends ProtocolType> {
+export class CircuitZKit<Type extends ProvingSystemType> {
   constructor(
     private readonly _config: CircuitZKitConfig,
     private readonly _implementer: IProtocolImplementer<Type>,
   ) {}
 
   /**
-   * Creates a Solidity verifier contract.
+   * Creates a verifier contract for the specified contract language.
    */
-  public async createVerifier(): Promise<void> {
+  public async createVerifier(languageExtension: VerifierLanguageType): Promise<void> {
     const vKeyFilePath: string = this.mustGetArtifactsFilePath("vkey");
     const verifierFilePath = path.join(
       this._config.verifierDirPath,
-      `${this._implementer.getVerifierName(this._config.circuitName)}.sol`,
+      `${this._implementer.getVerifierName(this._config.circuitName)}.${languageExtension}`,
     );
 
-    this._implementer.createVerifier(this._config.circuitName, vKeyFilePath, verifierFilePath);
+    this._implementer.createVerifier(this._config.circuitName, vKeyFilePath, verifierFilePath, languageExtension);
   }
 
   /**
@@ -113,10 +113,10 @@ export class CircuitZKit<Type extends ProtocolType> {
   /**
    * Returns the type of the proving protocol
    *
-   * @returns {ProtocolType} The protocol type.
+   * @returns {ProvingSystemType} The protocol proving system type.
    */
-  public getProtocolType(): ProtocolType {
-    return this._implementer.getProtocolType();
+  public getProvingSystemType(): ProvingSystemType {
+    return this._implementer.getProvingSystemType();
   }
 
   /**
@@ -124,8 +124,8 @@ export class CircuitZKit<Type extends ProtocolType> {
    *
    * @returns {string} The Solidity verifier template.
    */
-  public getVerifierTemplate(): string {
-    return this._implementer.getTemplate();
+  public getVerifierTemplate(languageExtension: VerifierLanguageType): string {
+    return this._implementer.getTemplate(languageExtension);
   }
 
   /**
