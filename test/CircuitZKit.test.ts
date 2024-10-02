@@ -223,7 +223,7 @@ describe("CircuitZKit", () => {
       expect(await verifier.verifyProof(...data)).to.be.true;
     });
 
-    it("should correctly create verifier and verify 'plonk' proof", async function () {
+    it("should correctly create Solidity verifier and verify 'plonk' proof", async function () {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
@@ -253,6 +253,42 @@ describe("CircuitZKit", () => {
       const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierPlonkVerifier");
 
       const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(...data)).to.be.true;
+    });
+
+    it("should correctly create Vyper verifier and verify 'plonk' proof", async function () {
+      const circuitName = "MultiDimensionalArray";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const mdArrayCircuit = getCircuitZKit<"plonk">(circuitName, "plonk", {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${mdArrayCircuit.getVerifierName()}.vy`);
+
+      await mdArrayCircuit.createVerifier("vy");
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const a = 2;
+      const b = [
+        [3, 1],
+        [44, 2],
+      ];
+
+      const proof: any = await mdArrayCircuit.generateProof({ a, b });
+
+      expect(await mdArrayCircuit.verifyProof(proof)).to.be.true;
+
+      let data = await mdArrayCircuit.generateCalldata(proof);
+
+      const MdArrayVerifierFactory = await this.hre.ethers.getContractFactory("MultiDimensionalArrayPlonkVerifier");
+      const verifier = await MdArrayVerifierFactory.deploy();
 
       expect(await verifier.verifyProof(...data)).to.be.true;
     });
