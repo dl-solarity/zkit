@@ -101,6 +101,7 @@ EC_MUL_PRECOMPILED_ADDRESS: constant(address) = 0x000000000000000000000000000000
 EC_PAIRING_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000008
 
 
+@pure
 @external
 def verifyProof(proofArr: uint256[24], publicSignals: uint256[<%=nPublic%>]) -> bool:
     if not self._checkInput(proofArr):
