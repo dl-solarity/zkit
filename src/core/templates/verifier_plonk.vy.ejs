@@ -20,8 +20,8 @@ G2_Y2: constant(uint256) = 40823678758634336813322034031454355683168513275934012
 
 # Verification Key data
 N: constant(uint256) = <%=2**power%>
-N_PUBLIC: constant(uint16) = <%=nPublic%>
-N_LAGRANGE: constant(uint16) = <%=nPublic%>
+N_PUBLIC: constant(uint256) = <%=nPublic%>
+N_LAGRANGE: constant(uint256) = <%=nPublic%>
 
 QM_X: constant(uint256) = <%=Qm[0]%>
 QM_Y: constant(uint256) = <%=Qm[0] == "0" ? "0" : Qm[1]%>
@@ -49,52 +49,52 @@ X2_Y2: constant(uint256) = <%=X_2[1][1]%>
 # Proof values offsets
 # Byte offset of every parameter of the proof array
 # Polynomial commitments
-P_A: constant(uint16) = 0
-P_B: constant(uint16) = 2
-P_C: constant(uint16) = 4
-P_Z: constant(uint16) = 6
-P_T1: constant(uint16) = 8
-P_T2: constant(uint16) = 10
-P_T3: constant(uint16) = 12
-P_WX_I: constant(uint16) = 14
-P_WX_IW: constant(uint16) = 16
+P_A: constant(uint256) = 0
+P_B: constant(uint256) = 2
+P_C: constant(uint256) = 4
+P_Z: constant(uint256) = 6
+P_T1: constant(uint256) = 8
+P_T2: constant(uint256) = 10
+P_T3: constant(uint256) = 12
+P_WX_I: constant(uint256) = 14
+P_WX_IW: constant(uint256) = 16
 
 # Opening evaluations
-P_EVAL_A: constant(uint16) = 18
-P_EVAL_B: constant(uint16) = 19
-P_EVAL_C: constant(uint16) = 20
-P_EVAL_S1: constant(uint16) = 21
-P_EVAL_S2: constant(uint16) = 22
-P_EVAL_ZW: constant(uint16) = 23
+P_EVAL_A: constant(uint256) = 18
+P_EVAL_B: constant(uint256) = 19
+P_EVAL_C: constant(uint256) = 20
+P_EVAL_S1: constant(uint256) = 21
+P_EVAL_S2: constant(uint256) = 22
+P_EVAL_ZW: constant(uint256) = 23
 
 # Memory data
 # Challenges
-P_ALPHA: constant(uint16) = 0
-P_BETA: constant(uint16) = 1
-P_GAMMA: constant(uint16) = 2
-P_XI: constant(uint16) = 3
-P_XIN: constant(uint16) = 4
-P_BETA_XI: constant(uint16) = 5
-P_V1: constant(uint16) = 6
-P_V2: constant(uint16) = 7
-P_V3: constant(uint16) = 8
-P_V4: constant(uint16) = 9
-P_V5: constant(uint16) = 10
-P_U: constant(uint16) = 11
+P_ALPHA: constant(uint256) = 0
+P_BETA: constant(uint256) = 1
+P_GAMMA: constant(uint256) = 2
+P_XI: constant(uint256) = 3
+P_XIN: constant(uint256) = 4
+P_BETA_XI: constant(uint256) = 5
+P_V1: constant(uint256) = 6
+P_V2: constant(uint256) = 7
+P_V3: constant(uint256) = 8
+P_V4: constant(uint256) = 9
+P_V5: constant(uint256) = 10
+P_U: constant(uint256) = 11
 
-P_PI: constant(uint16) = 12
-P_EVAL_R0: constant(uint16) = 13
-P_D: constant(uint16) = 14
-P_F: constant(uint16) = 16
-P_E: constant(uint16) = 18
-P_TMP: constant(uint16) = 20
-P_ALPHA2: constant(uint16) = 22
-P_ZH: constant(uint16) = 23
-P_ZH_INV: constant(uint16) = 24
+P_PI: constant(uint256) = 12
+P_EVAL_R0: constant(uint256) = 13
+P_D: constant(uint256) = 14
+P_F: constant(uint256) = 16
+P_E: constant(uint256) = 18
+P_TMP: constant(uint256) = 20
+P_ALPHA2: constant(uint256) = 22
+P_ZH: constant(uint256) = 23
+P_ZH_INV: constant(uint256) = 24
 
-P_EVAL_L1: constant(uint16) = 25
+P_EVAL_L1: constant(uint256) = 25
 
-P_TOTAL_SIZE: constant(uint16) = <%=25+nPublic%>
+P_TOTAL_SIZE: constant(uint256) = <%=25+nPublic%>
 
 EC_ADD_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000006
 EC_MUL_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000007
@@ -154,7 +154,7 @@ def _ecadd(a: uint256[2], b: uint256[2]) -> (bool, uint256[2]):
         revert_on_failure=False
     )
 
-    if not success:
+    if not success or len(response) != 64:
         return (False, [0, 0])
 
     x: uint256 = convert(slice(response, 0, 32), uint256)
@@ -176,7 +176,7 @@ def _ecmul(p: uint256[2], s: uint256) -> (bool, uint256[2]):
         revert_on_failure=False
     )
 
-    if not success:
+    if not success or len(response) != 64:
         return (False, [0, 0])
 
     x: uint256 = convert(slice(response, 0, 32), uint256)
@@ -326,7 +326,7 @@ def _calculateChallenges(proof: uint256[24], pubSignals: uint256[<%=nPublic%>]) 
 @pure
 @internal
 def _evaluateLagrange(w: uint256, xi: uint256) -> uint256:
-    return uint256_mulmod(N, (xi + BASE_FIELD_SIZE - w) % BASE_FIELD_SIZE, BASE_FIELD_SIZE)
+    return uint256_mulmod(N, uint256_addmod(xi, BASE_FIELD_SIZE - w, BASE_FIELD_SIZE), BASE_FIELD_SIZE)
 
 
 @pure
@@ -334,23 +334,23 @@ def _evaluateLagrange(w: uint256, xi: uint256) -> uint256:
 def _calculateLagrange(p: uint256[P_TOTAL_SIZE]) -> uint256[P_TOTAL_SIZE]:
     w: uint256 = 1
 
-    for i: uint16 in range(1, <%=nPublic+1%>):
+    for i: uint256 in range(1, <%=nPublic+1%>):
         p[P_EVAL_L1 + (i - 1)] = self._evaluateLagrange(w, p[P_XI])
         w = uint256_mulmod(w, W1, BASE_FIELD_SIZE)
 
     pointsToInverse: uint256[<%=nPublic+1%>] = empty(uint256[<%=nPublic+1%>])
-    for i: uint16 in range(<%=nPublic+1%>):
+    for i: uint256 in range(<%=nPublic+1%>):
         pointsToInverse[i] = p[P_ZH_INV + i]
 
     inverses: uint256[<%=nPublic+1%>] = self._inverseArray(pointsToInverse)
 
-    for i: uint16 in range(<%=nPublic+1%>):
+    for i: uint256 in range(<%=nPublic+1%>):
         p[P_ZH_INV + i] = inverses[i]
 
     zh: uint256 = p[P_ZH]
     w = 1
 
-    for i: uint16 in range(1, <%=nPublic+1%>):
+    for i: uint256 in range(1, <%=nPublic+1%>):
         p[P_EVAL_L1 + (i - 1)] = uint256_mulmod(
             uint256_mulmod(p[P_EVAL_L1 + (i - 1)], zh, BASE_FIELD_SIZE),
             w,
@@ -366,8 +366,12 @@ def _calculateLagrange(p: uint256[P_TOTAL_SIZE]) -> uint256[P_TOTAL_SIZE]:
 def _calculatePI(p: uint256[P_TOTAL_SIZE], pPub: uint256[<%=nPublic%>]) -> uint256:
     pl: uint256 = 0
 
-    for i: uint16 in range(<%=nPublic%>):
-        pl = (pl + BASE_FIELD_SIZE - uint256_mulmod(p[P_EVAL_L1 + i], pPub[i], BASE_FIELD_SIZE)) % BASE_FIELD_SIZE
+    for i: uint256 in range(<%=nPublic%>):
+        pl = uint256_addmod(
+            pl,
+            BASE_FIELD_SIZE - uint256_mulmod(p[P_EVAL_L1 + i], pPub[i], BASE_FIELD_SIZE),
+            BASE_FIELD_SIZE
+        )
 
     return pl
 
@@ -556,12 +560,12 @@ def _calculateF(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
 def _calculateE(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[2]):
     s: uint256 = (BASE_FIELD_SIZE - p[P_EVAL_R0]) % BASE_FIELD_SIZE
 
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_A],  p[P_V1], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_B],  p[P_V2], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_C],  p[P_V3], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S1],  p[P_V4], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S2],  p[P_V5], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_ZW],  p[P_U], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_A], p[P_V1], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_B], p[P_V2], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_C], p[P_V3], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S1], p[P_V4], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S2], p[P_V5], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_ZW], p[P_U], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
 
     return self._ecmul([G1_X, G1_Y], s)
 
