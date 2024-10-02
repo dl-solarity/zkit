@@ -94,14 +94,13 @@ P_ZH_INV: constant(uint16) = 24
 
 P_EVAL_L1: constant(uint16) = 25
 
-P_TOTAL_SIZE: constant(uint16) = <%=800+nPublic%>
+P_TOTAL_SIZE: constant(uint16) = <%=25+nPublic%>
 
 EC_ADD_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000006
 EC_MUL_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000007
 EC_PAIRING_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000008
 
 
-@pure
 @external
 def verifyProof(proofArr: uint256[24], publicSignals: uint256[<%=nPublic%>]) -> bool:
     if not self._checkInput(proofArr):
