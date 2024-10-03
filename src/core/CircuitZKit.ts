@@ -1,30 +1,53 @@
 import fs from "fs";
 import path from "path";
+import * as os from "os";
+import * as snarkjs from "snarkjs";
 
-import { ArtifactsFileType, CircuitZKitConfig } from "../types/circuit-zkit";
-import { Inputs } from "../types/proof-utils";
-import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProtocolType } from "../types/protocols";
+import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
+import { Signals } from "../types/proof-utils";
+import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
  */
-export class CircuitZKit<Type extends ProtocolType> {
+export class CircuitZKit<Type extends ProvingSystemType> {
   constructor(
     private readonly _config: CircuitZKitConfig,
     private readonly _implementer: IProtocolImplementer<Type>,
   ) {}
 
   /**
-   * Creates a Solidity verifier contract.
+   * Creates a verifier contract for the specified contract language.
    */
-  public async createVerifier(): Promise<void> {
+  public async createVerifier(languageExtension: VerifierLanguageType): Promise<void> {
     const vKeyFilePath: string = this.mustGetArtifactsFilePath("vkey");
     const verifierFilePath = path.join(
       this._config.verifierDirPath,
-      `${this._implementer.getVerifierName(this._config.circuitName)}.sol`,
+      `${this._implementer.getVerifierName(this._config.circuitName)}.${languageExtension}`,
     );
 
-    this._implementer.createVerifier(this._config.circuitName, vKeyFilePath, verifierFilePath);
+    this._implementer.createVerifier(this._config.circuitName, vKeyFilePath, verifierFilePath, languageExtension);
+  }
+
+  /**
+   * Calculates a witness for the given inputs.
+   *
+   * @param {Signals} inputs - The inputs for the circuit.
+   * @returns {Promise<bigint[]>} The generated witness.
+   */
+  public async calculateWitness(inputs: Signals): Promise<bigint[]> {
+    const tmpDir = path.join(os.tmpdir(), ".zkit");
+
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+
+    const wtnsFile = path.join(tmpDir, `${this.getCircuitName()}.wtns`);
+    const wasmFile = this.mustGetArtifactsFilePath("wasm");
+
+    await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
+
+    return (await snarkjs.wtns.exportJson(wtnsFile)) as bigint[];
   }
 
   /**
@@ -32,11 +55,11 @@ export class CircuitZKit<Type extends ProtocolType> {
    *
    * @dev The `inputs` should be in the same order as the circuit expects them.
    *
-   * @param {Inputs} inputs - The inputs for the circuit.
+   * @param {Signals} inputs - The inputs for the circuit.
    * @returns {Promise<ProofStructByProtocol<Type>>} The generated proof.
    * @todo Add support for other proving systems.
    */
-  public async generateProof(inputs: Inputs): Promise<ProofStructByProtocol<Type>> {
+  public async generateProof(inputs: Signals): Promise<ProofStructByProtocol<Type>> {
     const zKeyFile = this.mustGetArtifactsFilePath("zkey");
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
@@ -90,10 +113,10 @@ export class CircuitZKit<Type extends ProtocolType> {
   /**
    * Returns the type of the proving protocol
    *
-   * @returns {ProtocolType} The protocol type.
+   * @returns {ProvingSystemType} The protocol proving system type.
    */
-  public getProtocolType(): ProtocolType {
-    return this._implementer.getProtocolType();
+  public getProvingSystemType(): ProvingSystemType {
+    return this._implementer.getProvingSystemType();
   }
 
   /**
@@ -101,8 +124,8 @@ export class CircuitZKit<Type extends ProtocolType> {
    *
    * @returns {string} The Solidity verifier template.
    */
-  public getVerifierTemplate(): string {
-    return this._implementer.getTemplate();
+  public getVerifierTemplate(languageExtension: VerifierLanguageType): string {
+    return this._implementer.getTemplate(languageExtension);
   }
 
   /**
