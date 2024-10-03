@@ -1,0 +1,12 @@
+1,1,0,main.out1
+2,2,0,main.out2[0][0]
+3,3,0,main.out2[0][1]
+4,4,0,main.out2[1][0]
+5,5,0,main.out2[1][1]
+6,6,0,main.a
+7,7,0,main.b[0][0]
+8,8,0,main.b[0][1]
+9,9,0,main.b[1][0]
+10,10,0,main.b[1][1]
+11,11,0,main.m
+12,-1,0,main.isEqual

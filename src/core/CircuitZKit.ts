@@ -1,60 +1,32 @@
-import ejs from "ejs";
 import fs from "fs";
-import * as os from "os";
 import path from "path";
+import * as os from "os";
 import * as snarkjs from "snarkjs";
 
-import {
-  ArtifactsFileType,
-  Calldata,
-  CircuitZKitConfig,
-  Signals,
-  ProofStruct,
-  VerifierProvingSystem,
-  VerifierLanguageType,
-} from "../types/circuit-zkit";
+import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
+import { Signals } from "../types/proof-utils";
+import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
  */
-export class CircuitZKit {
-  constructor(private readonly _config: CircuitZKitConfig) {}
-
-  /**
-   * Returns the verifier template for the specified proving system and contract language.
-   *
-   * @param {VerifierProvingSystem} provingSystem - The template proving system.
-   * @param {VerifierLanguageType} fileExtension - The file extension.
-   * @returns {string} The verifier template.
-   */
-  public static getTemplate(provingSystem: VerifierProvingSystem, fileExtension: VerifierLanguageType): string {
-    switch (provingSystem) {
-      case "groth16":
-        return fs.readFileSync(path.join(__dirname, "templates", `verifier_groth16.${fileExtension}.ejs`), "utf8");
-      default:
-        throw new Error(`Ambiguous proving system: ${provingSystem}.`);
-    }
-  }
+export class CircuitZKit<Type extends ProvingSystemType> {
+  constructor(
+    private readonly _config: CircuitZKitConfig,
+    private readonly _implementer: IProtocolImplementer<Type>,
+  ) {}
 
   /**
    * Creates a verifier contract for the specified contract language.
    */
   public async createVerifier(languageExtension: VerifierLanguageType): Promise<void> {
     const vKeyFilePath: string = this.mustGetArtifactsFilePath("vkey");
-    const verifierFilePath = path.join(this._config.verifierDirPath, `${this.getVerifierName()}.${languageExtension}`);
+    const verifierFilePath = path.join(
+      this._config.verifierDirPath,
+      `${this._implementer.getVerifierName(this._config.circuitName)}.${languageExtension}`,
+    );
 
-    const verifierTemplate: string = CircuitZKit.getTemplate(this.getProvingSystem(), languageExtension);
-
-    if (!fs.existsSync(this._config.verifierDirPath)) {
-      fs.mkdirSync(this._config.verifierDirPath, { recursive: true });
-    }
-
-    const templateParams = JSON.parse(fs.readFileSync(vKeyFilePath, "utf-8"));
-    templateParams["verifier_id"] = this.getVerifierName();
-
-    const verifierCode = ejs.render(verifierTemplate, templateParams);
-
-    fs.writeFileSync(verifierFilePath, verifierCode, "utf-8");
+    this._implementer.createVerifier(this._config.circuitName, vKeyFilePath, verifierFilePath, languageExtension);
   }
 
   /**
@@ -84,14 +56,14 @@ export class CircuitZKit {
    * @dev The `inputs` should be in the same order as the circuit expects them.
    *
    * @param {Signals} inputs - The inputs for the circuit.
-   * @returns {Promise<ProofStruct>} The generated proof.
+   * @returns {Promise<ProofStructByProtocol<Type>>} The generated proof.
    * @todo Add support for other proving systems.
    */
-  public async generateProof(inputs: Signals): Promise<ProofStruct> {
+  public async generateProof(inputs: Signals): Promise<ProofStructByProtocol<Type>> {
     const zKeyFile = this.mustGetArtifactsFilePath("zkey");
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
-    return (await snarkjs.groth16.fullProve(inputs, wasmFile, zKeyFile)) as ProofStruct;
+    return await this._implementer.generateProof(inputs, zKeyFile, wasmFile);
   }
 
   /**
@@ -100,28 +72,24 @@ export class CircuitZKit {
    * @dev The `proof` can be generated using the `generateProof` method.
    * @dev The `proof.publicSignals` should be in the same order as the circuit expects them.
    *
-   * @param {ProofStruct} proof - The proof to verify.
+   * @param {ProofStructByProtocol<Type>} proof - The proof to verify.
    * @returns {Promise<boolean>} Whether the proof is valid.
    */
-  public async verifyProof(proof: ProofStruct): Promise<boolean> {
+  public async verifyProof(proof: ProofStructByProtocol<Type>): Promise<boolean> {
     const vKeyFile = this.mustGetArtifactsFilePath("vkey");
 
-    const verifier = JSON.parse(fs.readFileSync(vKeyFile).toString());
-
-    return await snarkjs.groth16.verify(verifier, proof.publicSignals, proof.proof);
+    return this._implementer.verifyProof(proof, vKeyFile);
   }
 
   /**
    * Generates the calldata for the given proof. The calldata can be used to verify the proof on-chain.
    *
-   * @param {ProofStruct} proof - The proof to generate calldata for.
-   * @returns {Promise<Calldata>} - The generated calldata.
+   * @param {ProofStructByProtocol<Type>} proof - The proof to generate calldata for.
+   * @returns {Promise<CalldataByProtocol<Type>>} - The generated calldata.
    * @todo Add other types of calldata.
    */
-  public async generateCalldata(proof: ProofStruct): Promise<Calldata> {
-    const calldata = await snarkjs.groth16.exportSolidityCallData(proof.proof, proof.publicSignals);
-
-    return JSON.parse(`[${calldata}]`) as Calldata;
+  public async generateCalldata(proof: ProofStructByProtocol<Type>): Promise<CalldataByProtocol<Type>> {
+    return await this._implementer.generateCalldata(proof);
   }
 
   /**
@@ -139,16 +107,25 @@ export class CircuitZKit {
    * @returns {string} The verifier name.
    */
   public getVerifierName(): string {
-    return `${this._config.circuitName}Verifier`;
+    return this._implementer.getVerifierName(this._config.circuitName);
   }
 
   /**
-   * Returns the proving system of verifier template that was stored in the config
+   * Returns the type of the proving protocol
    *
-   * @returns {VerifierProvingSystem} The verifier proving system.
+   * @returns {ProvingSystemType} The protocol proving system type.
    */
-  public getProvingSystem(): VerifierProvingSystem {
-    return this._config.provingSystem ?? "groth16";
+  public getProvingSystemType(): ProvingSystemType {
+    return this._implementer.getProvingSystemType();
+  }
+
+  /**
+   * Returns the Solidity verifier template.
+   *
+   * @returns {string} The Solidity verifier template.
+   */
+  public getVerifierTemplate(languageExtension: VerifierLanguageType): string {
+    return this._implementer.getTemplate(languageExtension);
   }
 
   /**
@@ -184,10 +161,10 @@ export class CircuitZKit {
         fileName = `${circuitName}.r1cs`;
         break;
       case "zkey":
-        fileName = `${circuitName}.zkey`;
+        fileName = `${this._implementer.getZKeyFileName(circuitName)}`;
         break;
       case "vkey":
-        fileName = `${circuitName}.vkey.json`;
+        fileName = `${this._implementer.getVKeyFileName(circuitName)}`;
         break;
       case "sym":
         fileName = `${circuitName}.sym`;

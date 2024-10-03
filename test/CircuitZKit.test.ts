@@ -1,12 +1,23 @@
 import ejs from "ejs";
 import fs from "fs";
-import * as os from "os";
 import path from "path";
+import * as os from "os";
 
 import { expect } from "chai";
 import { useFixtureProject } from "./helpers";
 
-import { CircuitZKit, ProofStruct } from "../src";
+import {
+  CircuitZKit,
+  CircuitZKitConfig,
+  Groth16Implementer,
+  PlonkImplementer,
+  ProvingSystemType,
+  IProtocolImplementer,
+  Groth16ProofStruct,
+  PlonkProofStruct,
+  Groth16Calldata,
+  PlonkCalldata,
+} from "../src";
 
 describe("CircuitZKit", () => {
   function getArtifactsFullPath(circuitDirSourceName: string): string {
@@ -17,26 +28,53 @@ describe("CircuitZKit", () => {
     return path.join(process.cwd(), "contracts", "verifiers");
   }
 
+  function getCircuitZKit<T extends ProvingSystemType>(
+    circuitName: string,
+    protocolType: ProvingSystemType,
+    config?: CircuitZKitConfig,
+  ): CircuitZKit<T> {
+    let implementer: IProtocolImplementer<T>;
+
+    switch (protocolType) {
+      case "groth16":
+        implementer = new Groth16Implementer();
+        break;
+      case "plonk":
+        implementer = new PlonkImplementer();
+        break;
+      default:
+        throw new Error(`Invalid protocol type - ${protocolType}`);
+    }
+
+    if (!config) {
+      config = {
+        circuitName,
+        circuitArtifactsPath: getArtifactsFullPath(`${circuitName}.circom`),
+        verifierDirPath: getVerifiersDirFullPath(),
+      };
+    }
+
+    return new CircuitZKit<T>(config, implementer);
+  }
+
   describe("CircuitZKit creation", () => {
     useFixtureProject("simple-circuits");
 
     it("should correctly set config parameters", async () => {
       const circuitName = "Multiplier";
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
-        circuitName,
-        circuitArtifactsPath: getArtifactsFullPath(`${circuitName}.circom`),
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
 
       expect(multiplierCircuit.getCircuitName()).to.be.eq(circuitName);
-      expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}Verifier`);
-      expect(multiplierCircuit.getProvingSystem()).to.be.eq("groth16");
+      expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}Groth16Verifier`);
+      expect(multiplierCircuit.getProvingSystemType()).to.be.eq("groth16");
     });
   });
 
   describe("getTemplate", () => {
     it("should return correct 'groth16' Solidity template", async () => {
+      const multiplierCircuit = getCircuitZKit<"groth16">("Multiplier", "groth16");
+
       const groth16TemplatePath: string = path.join(
         __dirname,
         "..",
@@ -46,10 +84,12 @@ describe("CircuitZKit", () => {
         "verifier_groth16.sol.ejs",
       );
 
-      expect(CircuitZKit.getTemplate("groth16", "sol")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
+      expect(multiplierCircuit.getVerifierTemplate("sol")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
     });
 
     it("should return correct 'groth16' Vyper template", async () => {
+      const multiplierCircuit = getCircuitZKit<"groth16">("Multiplier", "groth16");
+
       const groth16TemplatePath: string = path.join(
         __dirname,
         "..",
@@ -59,17 +99,22 @@ describe("CircuitZKit", () => {
         "verifier_groth16.vy.ejs",
       );
 
-      expect(CircuitZKit.getTemplate("groth16", "vy")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
+      expect(multiplierCircuit.getVerifierTemplate("vy")).to.be.eq(fs.readFileSync(groth16TemplatePath, "utf-8"));
     });
 
-    it("should get exception if pass invalid proving system", async () => {
-      const circuitZKit: any = CircuitZKit;
+    it("should return correct 'plonk' Solidity template", async () => {
+      const multiplierCircuit = getCircuitZKit<"plonk">("Multiplier", "plonk");
 
-      const invalidTemplate = "fflonk";
+      const plonkTemplatePath: string = path.join(
+        __dirname,
+        "..",
+        "src",
+        "core",
+        "templates",
+        "verifier_plonk.sol.ejs",
+      );
 
-      expect(function () {
-        circuitZKit.getTemplate(invalidTemplate, "sol");
-      }).to.throw(`Ambiguous proving system: ${invalidTemplate}.`);
+      expect(multiplierCircuit.getVerifierTemplate("sol")).to.be.eq(fs.readFileSync(plonkTemplatePath, "utf-8"));
     });
   });
 
@@ -80,18 +125,19 @@ describe("CircuitZKit", () => {
       fs.rmSync(getVerifiersDirFullPath(), { recursive: true, force: true });
     });
 
-    it("should correctly create verifier Solidity file", async () => {
+    it("should correctly create 'groth16' Solidity verifier file", async () => {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+      const protocolType: ProvingSystemType = "groth16";
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
         circuitName,
         circuitArtifactsPath: artifactsDirFullPath,
         verifierDirPath,
       });
 
-      expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}Verifier`);
+      expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}Groth16Verifier`);
 
       const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
 
@@ -101,53 +147,54 @@ describe("CircuitZKit", () => {
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
-      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.vkey.json`);
+      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.${protocolType}.vkey.json`);
       expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(expectedVKeyFilePath);
 
-      const template = CircuitZKit.getTemplate("groth16", "sol");
+      const template = multiplierCircuit.getVerifierTemplate("sol");
       const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
       templateParams["verifier_id"] = multiplierCircuit.getVerifierName();
 
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
 
-    it("should correctly create verifier Vyper file", async () => {
+    it("should correctly create 'plonk' verifier file", async () => {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+      const protocolType: ProvingSystemType = "plonk";
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"plonk">(circuitName, "plonk", {
         circuitName,
         circuitArtifactsPath: artifactsDirFullPath,
         verifierDirPath,
       });
 
-      expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}Verifier`);
+      expect(multiplierCircuit.getVerifierName()).to.be.eq(`${circuitName}PlonkVerifier`);
 
-      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.vy`);
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.false;
 
-      await multiplierCircuit.createVerifier("vy");
+      await multiplierCircuit.createVerifier("sol");
 
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
-      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.vkey.json`);
+      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.${protocolType}.vkey.json`);
       expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(expectedVKeyFilePath);
 
-      const template = CircuitZKit.getTemplate("groth16", "vy");
+      const template = multiplierCircuit.getVerifierTemplate("sol");
       const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
       templateParams["verifier_id"] = multiplierCircuit.getVerifierName();
 
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
 
-    it("should correctly create Solidity verifier and verify proof", async function () {
+    it("should correctly create verifier and verify 'groth16' proof", async function () {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
         circuitName,
         circuitArtifactsPath: artifactsDirFullPath,
         verifierDirPath,
@@ -158,7 +205,7 @@ describe("CircuitZKit", () => {
       await multiplierCircuit.createVerifier("sol");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
-      await this.hre.run("compile", { quiet: true });
+      await this.hre.run("compile", { quiet: true, force: true });
 
       const proof = await multiplierCircuit.generateProof({
         a: 10,
@@ -169,27 +216,27 @@ describe("CircuitZKit", () => {
 
       const data = await multiplierCircuit.generateCalldata(proof);
 
-      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierVerifier");
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierGroth16Verifier");
 
       const verifier = await MultiplierVerifierFactory.deploy();
 
       expect(await verifier.verifyProof(...data)).to.be.true;
     });
 
-    it("should correctly create Vyper verifier and verify proof", async function () {
+    it("should correctly create Solidity verifier and verify 'plonk' proof", async function () {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"plonk">(circuitName, "plonk", {
         circuitName,
         circuitArtifactsPath: artifactsDirFullPath,
         verifierDirPath,
       });
 
-      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.vy`);
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
 
-      await multiplierCircuit.createVerifier("vy");
+      await multiplierCircuit.createVerifier("sol");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
       await this.hre.run("compile", { quiet: true });
@@ -203,9 +250,45 @@ describe("CircuitZKit", () => {
 
       const data = await multiplierCircuit.generateCalldata(proof);
 
-      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierVerifier");
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierPlonkVerifier");
 
       const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(...data)).to.be.true;
+    });
+
+    it("should correctly create Vyper verifier and verify 'plonk' proof", async function () {
+      const circuitName = "MultiDimensionalArray";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const mdArrayCircuit = getCircuitZKit<"plonk">(circuitName, "plonk", {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${mdArrayCircuit.getVerifierName()}.vy`);
+
+      await mdArrayCircuit.createVerifier("vy");
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const a = 2;
+      const b = [
+        [3, 1],
+        [44, 2],
+      ];
+
+      const proof: any = await mdArrayCircuit.generateProof({ a, b });
+
+      expect(await mdArrayCircuit.verifyProof(proof)).to.be.true;
+
+      let data = await mdArrayCircuit.generateCalldata(proof);
+
+      const MdArrayVerifierFactory = await this.hre.ethers.getContractFactory("MultiDimensionalArrayPlonkVerifier");
+      const verifier = await MdArrayVerifierFactory.deploy();
 
       expect(await verifier.verifyProof(...data)).to.be.true;
     });
@@ -214,8 +297,9 @@ describe("CircuitZKit", () => {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+      const protocolType: ProvingSystemType = "groth16";
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, protocolType, {
         circuitName,
         circuitArtifactsPath: artifactsDirFullPath,
         verifierDirPath,
@@ -229,10 +313,10 @@ describe("CircuitZKit", () => {
       await multiplierCircuit.createVerifier("sol");
       expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
 
-      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.vkey.json`);
+      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.${protocolType}.vkey.json`);
       expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(expectedVKeyFilePath);
 
-      const template = CircuitZKit.getTemplate("groth16", "sol");
+      const template = multiplierCircuit.getVerifierTemplate("sol");
       const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
       templateParams["verifier_id"] = multiplierCircuit.getVerifierName();
 
@@ -242,7 +326,7 @@ describe("CircuitZKit", () => {
     it("should get exception if vKey file does not exist", async () => {
       const circuitName = "Multiplier";
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
         circuitName,
         circuitArtifactsPath: getArtifactsFullPath(`a/Addition.circom`),
         verifierDirPath: getVerifiersDirFullPath(),
@@ -263,7 +347,7 @@ describe("CircuitZKit", () => {
       const circuitName = "Multiplier";
       const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
         circuitName,
         circuitArtifactsPath,
         verifierDirPath: getVerifiersDirFullPath(),
@@ -285,19 +369,29 @@ describe("CircuitZKit", () => {
   describe("generateProof/verifyProof", () => {
     useFixtureProject("simple-circuits");
 
-    it("should correctly generate and verify proof", async () => {
+    it("should correctly generate and verify 'groth16' proof", async () => {
       const circuitName = "Multiplier";
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
-        circuitName,
-        circuitArtifactsPath: getArtifactsFullPath(`${circuitName}.circom`),
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
 
       const b = 10,
         a = 20;
 
-      const proof: ProofStruct = await multiplierCircuit.generateProof({ a, b });
+      const proof: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b });
+
+      expect(proof.publicSignals).to.be.deep.eq([(b * a).toString()]);
+      expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+    });
+
+    it("should correctly generate and verify 'plonk' proof", async () => {
+      const circuitName = "Multiplier";
+
+      const multiplierCircuit = getCircuitZKit<"plonk">(circuitName, "plonk");
+
+      const b = 10,
+        a = 20;
+
+      const proof: PlonkProofStruct = await multiplierCircuit.generateProof({ a, b });
 
       expect(proof.publicSignals).to.be.deep.eq([(b * a).toString()]);
       expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
@@ -311,36 +405,46 @@ describe("CircuitZKit", () => {
       fs.rmSync(getVerifiersDirFullPath(), { recursive: true, force: true });
     });
 
-    it("should correctly generate calldata and verify proof on the verifier contract", async function () {
+    it("should correctly generate 'groth16' calldata and verify proof on the verifier contract", async function () {
       const circuitName = "Multiplier";
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
-        circuitName,
-        circuitArtifactsPath: getArtifactsFullPath(`${circuitName}.circom`),
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
 
       await multiplierCircuit.createVerifier("sol");
 
       await this.hre.run("compile", { quiet: true });
 
-      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierVerifier");
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierGroth16Verifier");
       const verifier = await MultiplierVerifierFactory.deploy();
 
       const b = 10,
         a = 20;
 
-      const proof: ProofStruct = await multiplierCircuit.generateProof({ a, b });
-      const generatedCalldata = await multiplierCircuit.generateCalldata(proof);
+      const proof: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b });
+      const generatedCalldata: Groth16Calldata = await multiplierCircuit.generateCalldata(proof);
 
-      expect(
-        await verifier.verifyProof(
-          generatedCalldata[0],
-          generatedCalldata[1],
-          generatedCalldata[2],
-          generatedCalldata[3],
-        ),
-      );
+      expect(await verifier.verifyProof(...generatedCalldata));
+    });
+
+    it("should correctly generate 'plonk' calldata and verify proof on the verifier contract", async function () {
+      const circuitName = "Multiplier";
+
+      const multiplierCircuit = getCircuitZKit<"plonk">(circuitName, "plonk");
+
+      await multiplierCircuit.createVerifier("sol");
+
+      await this.hre.run("compile", { quiet: true });
+
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierPlonkVerifier");
+      const verifier = await MultiplierVerifierFactory.deploy();
+
+      const b = 10,
+        a = 20;
+
+      const proof: PlonkProofStruct = await multiplierCircuit.generateProof({ a, b });
+      const generatedCalldata: PlonkCalldata = await multiplierCircuit.generateCalldata(proof);
+
+      expect(await verifier.verifyProof(...generatedCalldata));
     });
   });
 
@@ -351,11 +455,7 @@ describe("CircuitZKit", () => {
       const circuitName = "Multiplier";
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
-        circuitName,
-        circuitArtifactsPath: artifactsDirFullPath,
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
 
       expect(multiplierCircuit.mustGetArtifactsFilePath("wasm")).to.be.eq(
         path.join(artifactsDirFullPath, `${circuitName}_js`, `${circuitName}.wasm`),
@@ -366,7 +466,7 @@ describe("CircuitZKit", () => {
       const circuitName = "Addition";
       const artifactsDirFullPath = getArtifactsFullPath(`a/${circuitName}.circom`);
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
         circuitName,
         circuitArtifactsPath: artifactsDirFullPath,
         verifierDirPath: getVerifiersDirFullPath(),
@@ -385,20 +485,16 @@ describe("CircuitZKit", () => {
       const circuitName = "Multiplier";
       const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
 
-      const multiplierCircuit: CircuitZKit = new CircuitZKit({
-        circuitName,
-        circuitArtifactsPath: artifactsDirFullPath,
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
 
       expect(multiplierCircuit.getArtifactsFilePath("r1cs")).to.be.eq(
         path.join(artifactsDirFullPath, `${circuitName}.r1cs`),
       );
       expect(multiplierCircuit.getArtifactsFilePath("zkey")).to.be.eq(
-        path.join(artifactsDirFullPath, `${circuitName}.zkey`),
+        path.join(artifactsDirFullPath, `${circuitName}.groth16.zkey`),
       );
       expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(
-        path.join(artifactsDirFullPath, `${circuitName}.vkey.json`),
+        path.join(artifactsDirFullPath, `${circuitName}.groth16.vkey.json`),
       );
       expect(multiplierCircuit.getArtifactsFilePath("sym")).to.be.eq(
         path.join(artifactsDirFullPath, `${circuitName}.sym`),
@@ -414,11 +510,7 @@ describe("CircuitZKit", () => {
     it("should get exception if pass invalid file type", async () => {
       const circuitName = "Multiplier";
 
-      const multiplierCircuit: any = new CircuitZKit({
-        circuitName,
-        circuitArtifactsPath: getArtifactsFullPath(`${circuitName}.circom`),
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16") as any;
 
       const invalidFileType = "wwasm";
 
