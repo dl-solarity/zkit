@@ -23,9 +23,7 @@ contract <%=verifier_id%> {
     
     // Verification Key data
     uint32 constant N          = <%=2**power%>;
-    uint16 constant N_PUBLIC   = <%=nPublic%>;
-    uint16 constant N_LAGRANGE = <%=Math.max(nPublic, 1)%>;
-    
+
     uint256 constant QM_X  = <%=Qm[0]%>;
     uint256 constant QM_Y  = <%=Qm[0] == "0" ? "0" : Qm[1]%>;
     uint256 constant QL_X  = <%=Ql[0]%>;
@@ -94,10 +92,8 @@ contract <%=verifier_id%> {
     uint16 constant P_ZH      = 736;
     uint16 constant P_ZH_INV  = 768;
 
-    <% for (let i=1; i<=Math.max(nPublic, 1); i++) { %>
-    uint16 constant P_EVAL_L<%=i%> = <%=768+i*32%>;
-    <% } %>
-    <% let pLastMem = 800+32*Math.max(nPublic,1) %>
+    uint16 constant P_EVAL_L1 = 800;
+    <% let pLastMem = 800+32*nPublic %>
     uint16 constant P_TOTAL_SIZE = <%=pLastMem%>;
 
     function verifyProof(
@@ -131,7 +127,7 @@ contract <%=verifier_id%> {
             }
 
             function inverseArray(pVals_, n_) {
-                let pAux := mload(64)     // Point to the next free position
+                let pAux := mload(64)       // Point to the next free position
                 let pIn := pVals_
                 let lastPIn := add(pVals_, mul(n_, 32))  // Read n elemnts
                 let acc := mload(pIn)       // Read the first element
@@ -203,15 +199,14 @@ contract <%=verifier_id%> {
                 mstore(add(mIn, 448), S3_X)
                 mstore(add(mIn, 480), S3_Y)
 
-                <%for (let i = 0; i < nPublic; i++) {%>
-                mstore(add(mIn, <%= 512 + i*32 %>), mload(add(pubSignals_, <%=i*32%>)))
+                <%for (let i = 0; i < nPublic; i++) {%>mstore(add(mIn, <%= 512 + i*32 %>), mload(add(pubSignals_, <%=i*32%>)))
                 <%}%>
-                mstore(add(mIn, <%= 512 + nPublic*32 + 0 %> ), mload(add(proof_, P_A)))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 32 %> ), mload(add(proof_, add(P_A, 32))))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 64 %> ), mload(add(proof_, P_B)))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 96 %> ), mload(add(proof_, add(P_B, 32))))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 128 %> ), mload(add(proof_, P_C)))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 160 %> ), mload(add(proof_, add(P_C, 32))))
+                mstore(add(mIn, <%= 512 + nPublic*32 %>), mload(add(proof_, P_A)))
+                mstore(add(mIn, <%= 512 + nPublic*32 + 32 %>), mload(add(proof_, add(P_A, 32))))
+                mstore(add(mIn, <%= 512 + nPublic*32 + 64 %>), mload(add(proof_, P_B)))
+                mstore(add(mIn, <%= 512 + nPublic*32 + 96 %>), mload(add(proof_, add(P_B, 32))))
+                mstore(add(mIn, <%= 512 + nPublic*32 + 128 %>), mload(add(proof_, P_C)))
+                mstore(add(mIn, <%= 512 + nPublic*32 + 160 %>), mload(add(proof_, add(P_C, 32))))
                 
                 beta := mod(keccak256(mIn, <%= 704 + 32 * nPublic %>), BASE_FIELD_SIZE) 
                 mstore(add(pMem_, P_BETA), beta)
@@ -257,8 +252,7 @@ contract <%=verifier_id%> {
                 mstore(add(pMem_, P_BETA_XI), mulmod(beta, aux, BASE_FIELD_SIZE))
 
                 // challenges.xi^n
-                <%for (let i=0; i<power;i++) {%>
-                aux := mulmod(aux, aux, BASE_FIELD_SIZE)
+                <%for (let i=0; i<power;i++) {%>aux := mulmod(aux, aux, BASE_FIELD_SIZE)
                 <%}%>
                 mstore(add(pMem_, P_XIN), aux)
 
@@ -287,82 +281,102 @@ contract <%=verifier_id%> {
             }
             
             function calculateLagrange(pMem_) {
-                let w := 1                
-                <% for (let i=1; i<=Math.max(nPublic, 1); i++) { %>
+                let w := 1
+
                 mstore(
-                    add(pMem_, P_EVAL_L<%=i%>), 
+                    add(pMem_, P_EVAL_L1),
                     mulmod(
-                        N, 
+                        N,
                         mod(
                             add(
                                 sub(
-                                    mload(add(pMem_, P_XI)), 
+                                    mload(add(pMem_, P_XI)),
                                     w
-                                ), 
+                                ),
                                 BASE_FIELD_SIZE
                             ),
                             BASE_FIELD_SIZE
-                        ), 
+                        ),
                         BASE_FIELD_SIZE
                     )
                 )
-                <% if (i<Math.max(nPublic, 1)) { %>
-                w := mulmod(w, W1, BASE_FIELD_SIZE)
-                <% } %>
-                <% } %>
+                <% if (nPublic>1) { %>
+                for { let i := 1 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
+                    w := mulmod(w, W1, BASE_FIELD_SIZE)
+
+                    mstore(
+                        add(pMem_, add(P_EVAL_L1, mul(i, 32))),
+                        mulmod(
+                            N,
+                            mod(
+                                add(
+                                    sub(
+                                        mload(add(pMem_, P_XI)),
+                                        w
+                                    ),
+                                    BASE_FIELD_SIZE
+                                ),
+                                BASE_FIELD_SIZE
+                            ),
+                            BASE_FIELD_SIZE
+                        )
+                    )
+                }
+                <% } -%>
                 
-                inverseArray(add(pMem_, P_ZH_INV), <%=Math.max(nPublic, 1)+1%> )
+                inverseArray(add(pMem_, P_ZH_INV), <%=nPublic+1%>)
                 
                 let zh := mload(add(pMem_, P_ZH))
-                w := 1
-                <% for (let i=1; i<=Math.max(nPublic, 1); i++) { %>
-                <% if (i==1) { %>
+
                 mstore(
-                    add(pMem_, P_EVAL_L1 ), 
+                    add(pMem_, P_EVAL_L1),
                     mulmod(
-                        mload(add(pMem_, P_EVAL_L1 )),
+                        mload(add(pMem_, P_EVAL_L1)),
                         zh,
                         BASE_FIELD_SIZE
                     )
                 )
-                <% } else { %>
-                mstore(
-                    add(pMem_, P_EVAL_L<%=i%>), 
-                    mulmod(
-                        w,
+            <% if (nPublic>1) { %>
+                w := 1
+
+                for { let i := 1 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
+                    w := mulmod(w, W1, BASE_FIELD_SIZE)
+
+                    mstore(
+                        add(pMem_, add(P_EVAL_L1, mul(i, 32))),
                         mulmod(
-                            mload(add(pMem_, P_EVAL_L<%=i%>)),
-                            zh,
+                            w,
+                            mulmod(
+                                mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
+                                zh,
+                                BASE_FIELD_SIZE
+                            ),
+                            BASE_FIELD_SIZE
+                        )
+                    )
+                }
+            <% } %>}
+            
+            function calculatePI(pMem_, pPub) {
+                let pl := 0
+
+                for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
+                    pl := mod(
+                        add(
+                            sub(
+                                pl,
+                                mulmod(
+                                    mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
+                                    mload(add(pPub, mul(i, 32))),
+                                    BASE_FIELD_SIZE
+                                )
+                            ),
                             BASE_FIELD_SIZE
                         ),
                         BASE_FIELD_SIZE
                     )
-                )
-                <% } %>
-                <% if (i<Math.max(nPublic, 1)) { %> w := mulmod(w, W1, BASE_FIELD_SIZE) <% } %>
-                <% } %>
-            }
-            
-            function calculatePI(pMem_, pPub) {
-                let pl := 0
-                
-                <% for (let i=0; i<nPublic; i++) { %> 
-                pl := mod(
-                    add(
-                        sub(
-                            pl,  
-                            mulmod(
-                                mload(add(pMem_, P_EVAL_L<%=i+1%>)),
-                                mload(add(pPub, <%=i*32%>)),
-                                BASE_FIELD_SIZE
-                            )
-                        ),
-                        BASE_FIELD_SIZE
-                    ),
-                    BASE_FIELD_SIZE
-                )
-                <% } %>
-                
+                }
+
                 mstore(add(pMem_, P_PI), pl)
             }
 
@@ -406,11 +420,6 @@ contract <%=verifier_id%> {
             function g1_setC(pR, x, y) {
                 mstore(pR, x)
                 mstore(add(pR, 32), y)
-            }
-
-            function g1_calldataSet(pR, pP) {
-                mstore(pR,          mload(pP))
-                mstore(add(pR, 32), mload(add(pP, 32)))
             }
 
             function g1_acc(pR, pP) -> res_ {
@@ -505,7 +514,7 @@ contract <%=verifier_id%> {
                 )
 
                 // We'll use mIn to save d2
-                g1_calldataSet(add(mIn, 192), add(proof_, P_Z))
+                g1_set(add(mIn, 192), add(proof_, P_Z))
 
                 if iszero (g1_mulSet(mIn, add(mIn, 192), addmod(addmod(d2a, d2b, BASE_FIELD_SIZE), mload(add(pMem_, P_U)), BASE_FIELD_SIZE))) {
                     leave
@@ -534,7 +543,7 @@ contract <%=verifier_id%> {
                 }
 
                 // We'll use mIn + 128 to save d4
-                g1_calldataSet(add(mIn, 128), add(proof_, P_T1))
+                g1_set(add(mIn, 128), add(proof_, P_T1))
 
                 if iszero(g1_mulAccC(add(mIn, 128), mload(add(proof_, P_T2)), mload(add(proof_, add(P_T2, 32))), mload(add(pMem_, P_XIN)))) {
                     leave
@@ -602,8 +611,8 @@ contract <%=verifier_id%> {
                 let _pWxiw := add(mIn, 448)
                 let _aux := add(mIn, 512)
 
-                g1_calldataSet(_pWxi, add(proof_, P_WX_I))
-                g1_calldataSet(_pWxiw, add(proof_, P_WX_IW))
+                g1_set(_pWxi, add(proof_, P_WX_I))
+                g1_set(_pWxiw, add(proof_, P_WX_IW))
 
                 // A1
                 if iszero(g1_mulSet(mIn, _pWxiw, mload(add(pMem_, P_U)))) {
