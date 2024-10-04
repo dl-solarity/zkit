@@ -6,9 +6,9 @@ pragma solidity >=0.7.0 <0.9.0;
 
 contract <%=verifier_id%> {
     // Omega
-    uint256 constant W1 = <%=w%>;    
+    uint256 constant W1 = <%=w%>;
     // Scalar field size
-    uint256 constant BASE_FIELD_SIZE  = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+    uint256 constant BASE_FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     // Base field size
     uint256 constant QF = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
     
@@ -22,7 +22,7 @@ contract <%=verifier_id%> {
     uint256 constant G2_Y2 = 4082367875863433681332203403145435568316851327593401208105741076214120093531;
     
     // Verification Key data
-    uint32 constant N          = <%=2**power%>;
+    uint32 constant N = <%=2**power%>;
 
     uint256 constant QM_X  = <%=Qm[0]%>;
     uint256 constant QM_Y  = <%=Qm[0] == "0" ? "0" : Qm[1]%>;
@@ -134,8 +134,8 @@ contract <%=verifier_id%> {
                 pIn := add(pIn, 32)         // Point to the second element
                 let inv
     
-                for { } lt(pIn, lastPIn) { 
-                    pAux := add(pAux, 32) 
+                for { } lt(pIn, lastPIn) {
+                    pAux := add(pAux, 32)
                     pIn := add(pIn, 32)
                 } 
                 {
@@ -149,8 +149,8 @@ contract <%=verifier_id%> {
                 // pIn points to the n+1 element, we substract to point to n
                 pIn := sub(pIn, 32)
                 lastPIn := pVals_  // We don't process the first element 
-                for { } gt(pIn, lastPIn) { 
-                    pAux := sub(pAux, 32) 
+                for { } gt(pIn, lastPIn) {
+                    pAux := sub(pAux, 32)
                     pIn := sub(pIn, 32)
                 } 
                 {
@@ -212,7 +212,10 @@ contract <%=verifier_id%> {
                 mstore(add(pMem_, P_BETA), beta)
 
                 // challenges.gamma
-                mstore(add(pMem_, P_GAMMA), mod(keccak256(add(pMem_, P_BETA), 32), BASE_FIELD_SIZE))
+                mstore(
+                    add(pMem_, P_GAMMA),
+                    mod(keccak256(add(pMem_, P_BETA), 32), BASE_FIELD_SIZE)
+                )
                 
                 // challenges.alpha
                 mstore(mIn, mload(add(pMem_, P_BETA)))
@@ -234,7 +237,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn, 192), mload(add(proof_, add(P_T3, 32))))
 
                 aux := mod(keccak256(mIn, 224), BASE_FIELD_SIZE)
-                mstore( add(pMem_, P_XI), aux)
+                mstore(add(pMem_, P_XI), aux)
 
                 // challenges.v
                 mstore(mIn, aux)
@@ -262,7 +265,7 @@ contract <%=verifier_id%> {
                 mstore(add(pMem_, P_ZH_INV), aux)  // We will invert later together with lagrange pols
                                 
                 // challenges.v^2, challenges.v^3, challenges.v^4, challenges.v^5
-                aux := mulmod(v1, v1,  BASE_FIELD_SIZE)
+                aux := mulmod(v1, v1, BASE_FIELD_SIZE)
                 mstore(add(pMem_, P_V2), aux)
                 aux := mulmod(aux, v1, BASE_FIELD_SIZE)
                 mstore(add(pMem_, P_V3), aux)
@@ -283,65 +286,28 @@ contract <%=verifier_id%> {
             function calculateLagrange(pMem_) {
                 let w := 1
 
-                mstore(
-                    add(pMem_, P_EVAL_L1),
-                    mulmod(
-                        N,
-                        mod(
-                            add(
-                                sub(
-                                    mload(add(pMem_, P_XI)),
-                                    w
-                                ),
-                                BASE_FIELD_SIZE
-                            ),
-                            BASE_FIELD_SIZE
-                        ),
-                        BASE_FIELD_SIZE
-                    )
-                )
-                <% if (nPublic>1) { %>
-                for { let i := 1 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
-                    w := mulmod(w, W1, BASE_FIELD_SIZE)
-
+                for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
                     mstore(
                         add(pMem_, add(P_EVAL_L1, mul(i, 32))),
                         mulmod(
                             N,
                             mod(
-                                add(
-                                    sub(
-                                        mload(add(pMem_, P_XI)),
-                                        w
-                                    ),
-                                    BASE_FIELD_SIZE
-                                ),
+                                add(sub(mload(add(pMem_, P_XI)), w), BASE_FIELD_SIZE),
                                 BASE_FIELD_SIZE
                             ),
                             BASE_FIELD_SIZE
                         )
                     )
+
+                    w := mulmod(w, W1, BASE_FIELD_SIZE)
                 }
-                <% } -%>
-                
+
                 inverseArray(add(pMem_, P_ZH_INV), <%=nPublic+1%>)
                 
                 let zh := mload(add(pMem_, P_ZH))
-
-                mstore(
-                    add(pMem_, P_EVAL_L1),
-                    mulmod(
-                        mload(add(pMem_, P_EVAL_L1)),
-                        zh,
-                        BASE_FIELD_SIZE
-                    )
-                )
-            <% if (nPublic>1) { %>
                 w := 1
 
-                for { let i := 1 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
-                    w := mulmod(w, W1, BASE_FIELD_SIZE)
-
+                for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
                     mstore(
                         add(pMem_, add(P_EVAL_L1, mul(i, 32))),
                         mulmod(
@@ -354,10 +320,12 @@ contract <%=verifier_id%> {
                             BASE_FIELD_SIZE
                         )
                     )
+
+                    w := mulmod(w, W1, BASE_FIELD_SIZE)
                 }
-            <% } %>}
+            }
             
-            function calculatePI(pMem_, pPub) {
+            function calculatePI(pMem_, pPub_) {
                 let pl := 0
 
                 for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
@@ -367,7 +335,7 @@ contract <%=verifier_id%> {
                                 pl,
                                 mulmod(
                                     mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
-                                    mload(add(pPub, mul(i, 32))),
+                                    mload(add(pPub_, mul(i, 32))),
                                     BASE_FIELD_SIZE
                                 )
                             ),
@@ -383,60 +351,79 @@ contract <%=verifier_id%> {
             function calculateR0(pMem_, proof_) {
                 let e1 := mload(add(pMem_, P_PI))
 
-                let e2 :=  mulmod(mload(add(pMem_, P_EVAL_L1)), mload(add(pMem_, P_ALPHA2)), BASE_FIELD_SIZE)
+                let e2 := mulmod(
+                    mload(add(pMem_, P_EVAL_L1)),
+                    mload(add(pMem_, P_ALPHA2)),
+                    BASE_FIELD_SIZE
+                )
 
                 let e3a := addmod(
                     mload(add(proof_, P_EVAL_A)),
-                    mulmod(mload(add(pMem_, P_BETA)), mload(add(proof_, P_EVAL_S1)), BASE_FIELD_SIZE),
-                    BASE_FIELD_SIZE)
+                    mulmod(
+                        mload(add(pMem_, P_BETA)),
+                        mload(add(proof_, P_EVAL_S1)),
+                        BASE_FIELD_SIZE
+                    ),
+                    BASE_FIELD_SIZE
+                )
                 e3a := addmod(e3a, mload(add(pMem_, P_GAMMA)), BASE_FIELD_SIZE)
 
                 let e3b := addmod(
                     mload(add(proof_, P_EVAL_B)),
-                    mulmod(mload(add(pMem_, P_BETA)), mload(add(proof_, P_EVAL_S2)), BASE_FIELD_SIZE),
-                    BASE_FIELD_SIZE)
+                    mulmod(
+                        mload(add(pMem_, P_BETA)),
+                        mload(add(proof_, P_EVAL_S2)),
+                        BASE_FIELD_SIZE
+                    ),
+                    BASE_FIELD_SIZE
+                )
                 e3b := addmod(e3b, mload(add(pMem_, P_GAMMA)), BASE_FIELD_SIZE)
 
                 let e3c := addmod(
                     mload(add(proof_, P_EVAL_C)),
                     mload(add(pMem_, P_GAMMA)),
-                    BASE_FIELD_SIZE)
+                    BASE_FIELD_SIZE
+                )
 
                 let e3 := mulmod(mulmod(e3a, e3b, BASE_FIELD_SIZE), e3c, BASE_FIELD_SIZE)
                 e3 := mulmod(e3, mload(add(proof_, P_EVAL_ZW)), BASE_FIELD_SIZE)
                 e3 := mulmod(e3, mload(add(pMem_, P_ALPHA)), BASE_FIELD_SIZE)
             
-                let r0 := addmod(e1, mod(sub(BASE_FIELD_SIZE, e2), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+                let r0 := addmod(
+                    e1,
+                    mod(sub(BASE_FIELD_SIZE, e2), BASE_FIELD_SIZE),
+                    BASE_FIELD_SIZE
+                )
                 r0 := addmod(r0, mod(sub(BASE_FIELD_SIZE, e3), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
                 
                 mstore(add(pMem_, P_EVAL_R0) , r0)
             }
             
-            function g1_set(pR, pP) {
-                mstore(pR, mload(pP))
-                mstore(add(pR, 32), mload(add(pP,32)))
+            function g1_set(pR_, pP_) {
+                mstore(pR_, mload(pP_))
+                mstore(add(pR_, 32), mload(add(pP_,32)))
             }   
 
-            function g1_setC(pR, x, y) {
-                mstore(pR, x)
-                mstore(add(pR, 32), y)
+            function g1_setC(pR_, x_, y_) {
+                mstore(pR_, x_)
+                mstore(add(pR_, 32), y_)
             }
 
-            function g1_acc(pR, pP) -> res_ {
+            function g1_acc(pR_, pP_) -> res_ {
                 let mIn := mload(64)
-                mstore(mIn, mload(pR))
-                mstore(add(mIn,32), mload(add(pR, 32)))
-                mstore(add(mIn,64), mload(pP))
-                mstore(add(mIn,96), mload(add(pP, 32)))
+                mstore(mIn, mload(pR_))
+                mstore(add(mIn,32), mload(add(pR_, 32)))
+                mstore(add(mIn,64), mload(pP_))
+                mstore(add(mIn,96), mload(add(pP_, 32)))
 
-                res_ := staticcall(sub(gas(), 2000), 6, mIn, 128, pR, 64)
+                res_ := staticcall(sub(gas(), 2000), 6, mIn, 128, pR_, 64)
             }
 
-            function g1_mulAccC(pR, x, y, s) -> res_ {
+            function g1_mulAccC(pR_, x_, y_, s_) -> res_ {
                 let mIn := mload(64)
-                mstore(mIn, x)
-                mstore(add(mIn,32), y)
-                mstore(add(mIn,64), s)
+                mstore(mIn, x_)
+                mstore(add(mIn,32), y_)
+                mstore(add(mIn,64), s_)
 
                 res_ := staticcall(sub(gas(), 2000), 7, mIn, 96, mIn, 64)
 
@@ -444,23 +431,23 @@ contract <%=verifier_id%> {
                     leave
                 }
 
-                mstore(add(mIn,64), mload(pR))
-                mstore(add(mIn,96), mload(add(pR, 32)))
+                mstore(add(mIn,64), mload(pR_))
+                mstore(add(mIn,96), mload(add(pR_, 32)))
 
-                res_ := staticcall(sub(gas(), 2000), 6, mIn, 128, pR, 64)
+                res_ := staticcall(sub(gas(), 2000), 6, mIn, 128, pR_, 64)
             }
 
-            function g1_mulSetC(pR, x, y, s) -> res_ {
+            function g1_mulSetC(pR_, x_, y_, s_) -> res_ {
                 let mIn := mload(64)
-                mstore(mIn, x)
-                mstore(add(mIn,32), y)
-                mstore(add(mIn,64), s)
+                mstore(mIn, x_)
+                mstore(add(mIn,32), y_)
+                mstore(add(mIn,64), s_)
 
-                res_ := staticcall(sub(gas(), 2000), 7, mIn, 96, pR, 64)
+                res_ := staticcall(sub(gas(), 2000), 7, mIn, 96, pR_, 64)
             }
 
-            function g1_mulSet(pR, pP, s) -> res_ {
-                res_ := g1_mulSetC(pR, mload(pP), mload(add(pP, 32)), s)
+            function g1_mulSet(pR_, pP_, s_) -> res_ {
+                res_ := g1_mulSetC(pR_, mload(pP_), mload(add(pP_, 32)), s_)
             }
 
             function calculateD(pMem_, proof_) -> isOk_ {
@@ -471,7 +458,16 @@ contract <%=verifier_id%> {
 
                 g1_setC(_pD, QC_X, QC_Y)
 
-                if iszero(g1_mulAccC(_pD, QM_X, QM_Y, mulmod(mload(add(proof_, P_EVAL_A)), mload(add(proof_, P_EVAL_B)), BASE_FIELD_SIZE))) {
+                if iszero(
+                    g1_mulAccC(
+                        _pD, QM_X, QM_Y,
+                        mulmod(
+                            mload(add(proof_, P_EVAL_A)),
+                            mload(add(proof_, P_EVAL_B)),
+                            BASE_FIELD_SIZE
+                        )
+                    )
+                ) {
                     leave
                 }
                 if iszero(g1_mulAccC(_pD, QL_X, QL_Y, mload(add(proof_, P_EVAL_A)))) {
@@ -487,19 +483,29 @@ contract <%=verifier_id%> {
                 let betaxi := mload(add(pMem_, P_BETA_XI))
                 let val1 := addmod(
                     addmod(mload(add(proof_, P_EVAL_A)), betaxi, BASE_FIELD_SIZE),
-                    gamma, BASE_FIELD_SIZE)
+                    gamma,
+                    BASE_FIELD_SIZE
+                )
 
                 let val2 := addmod(
                     addmod(
                         mload(add(proof_, P_EVAL_B)),
                         mulmod(betaxi, K1, BASE_FIELD_SIZE),
-                        BASE_FIELD_SIZE), gamma, BASE_FIELD_SIZE)
+                        BASE_FIELD_SIZE
+                    ),
+                    gamma,
+                    BASE_FIELD_SIZE
+                )
 
                 let val3 := addmod(
                     addmod(
                         mload(add(proof_, P_EVAL_C)),
                         mulmod(betaxi, K2, BASE_FIELD_SIZE),
-                        BASE_FIELD_SIZE), gamma, BASE_FIELD_SIZE)
+                        BASE_FIELD_SIZE
+                    ),
+                    gamma,
+                    BASE_FIELD_SIZE
+                )
 
                 let d2a := mulmod(
                     mulmod(mulmod(val1, val2, BASE_FIELD_SIZE), val3, BASE_FIELD_SIZE),
@@ -516,43 +522,104 @@ contract <%=verifier_id%> {
                 // We'll use mIn to save d2
                 g1_set(add(mIn, 192), add(proof_, P_Z))
 
-                if iszero (g1_mulSet(mIn, add(mIn, 192), addmod(addmod(d2a, d2b, BASE_FIELD_SIZE), mload(add(pMem_, P_U)), BASE_FIELD_SIZE))) {
+                if iszero(
+                    g1_mulSet(
+                        mIn,
+                        add(mIn, 192),
+                        addmod(
+                            addmod(d2a, d2b, BASE_FIELD_SIZE),
+                            mload(add(pMem_, P_U)),
+                            BASE_FIELD_SIZE
+                        )
+                    )
+                ) {
                     leave
                 }
 
                 val1 := addmod(
                     addmod(
                         mload(add(proof_, P_EVAL_A)),
-                        mulmod(mload(add(pMem_, P_BETA)), mload(add(proof_, P_EVAL_S1)), BASE_FIELD_SIZE),
-                        BASE_FIELD_SIZE), gamma, BASE_FIELD_SIZE)
+                        mulmod(
+                            mload(add(pMem_, P_BETA)),
+                            mload(add(proof_, P_EVAL_S1)),
+                            BASE_FIELD_SIZE
+                        ),
+                        BASE_FIELD_SIZE
+                    ),
+                    gamma,
+                    BASE_FIELD_SIZE
+                )
 
                 val2 := addmod(
                     addmod(
                         mload(add(proof_, P_EVAL_B)),
-                        mulmod(mload(add(pMem_, P_BETA)), mload(add(proof_, P_EVAL_S2)), BASE_FIELD_SIZE),
-                        BASE_FIELD_SIZE), gamma, BASE_FIELD_SIZE)
+                        mulmod(
+                            mload(add(pMem_, P_BETA)),
+                            mload(add(proof_, P_EVAL_S2)),
+                            BASE_FIELD_SIZE
+                        ),
+                        BASE_FIELD_SIZE
+                    ),
+                    gamma,
+                    BASE_FIELD_SIZE
+                )
     
                 val3 := mulmod(
                     mulmod(mload(add(pMem_, P_ALPHA)), mload(add(pMem_, P_BETA)), BASE_FIELD_SIZE),
-                    mload(add(proof_, P_EVAL_ZW)), BASE_FIELD_SIZE)
+                    mload(add(proof_, P_EVAL_ZW)),
+                    BASE_FIELD_SIZE
+                )
     
 
                 // We'll use mIn + 64 to save d3
-                if iszero(g1_mulSetC(add(mIn, 64), S3_X, S3_Y, mulmod(mulmod(val1, val2, BASE_FIELD_SIZE), val3, BASE_FIELD_SIZE))) {
+                if iszero(
+                    g1_mulSetC(
+                        add(mIn, 64), S3_X, S3_Y,
+                        mulmod(mulmod(val1, val2, BASE_FIELD_SIZE), val3, BASE_FIELD_SIZE)
+                    )
+                ) {
                     leave
                 }
 
                 // We'll use mIn + 128 to save d4
                 g1_set(add(mIn, 128), add(proof_, P_T1))
 
-                if iszero(g1_mulAccC(add(mIn, 128), mload(add(proof_, P_T2)), mload(add(proof_, add(P_T2, 32))), mload(add(pMem_, P_XIN)))) {
+                if iszero(
+                    g1_mulAccC(
+                        add(mIn, 128),
+                        mload(add(proof_, P_T2)),
+                        mload(add(proof_, add(P_T2, 32))),
+                        mload(add(pMem_, P_XIN))
+                    )
+                ) {
                     leave
                 }
-                let xin2 := mulmod(mload(add(pMem_, P_XIN)), mload(add(pMem_, P_XIN)), BASE_FIELD_SIZE)
-                if iszero(g1_mulAccC(add(mIn, 128), mload(add(proof_, P_T3)), mload(add(proof_, add(P_T3, 32))) , xin2)) {
+
+                let xin2 := mulmod(
+                    mload(add(pMem_, P_XIN)),
+                    mload(add(pMem_, P_XIN)),
+                    BASE_FIELD_SIZE
+                )
+
+                if iszero(
+                    g1_mulAccC(
+                        add(mIn, 128),
+                        mload(add(proof_, P_T3)),
+                        mload(add(proof_, add(P_T3, 32))),
+                        xin2
+                    )
+                ) {
                     leave
                 }
-                if iszero(g1_mulSetC(add(mIn, 128), mload(add(mIn, 128)), mload(add(mIn, 160)), mload(add(pMem_, P_ZH)))) {
+
+                if iszero(
+                    g1_mulSetC(
+                        add(mIn, 128),
+                        mload(add(mIn, 128)),
+                        mload(add(mIn, 160)),
+                        mload(add(pMem_, P_ZH))
+                    )
+                ) {
                     leave
                 }
 
@@ -571,15 +638,39 @@ contract <%=verifier_id%> {
 
                 g1_set(p, add(pMem_, P_D))
 
-                if iszero(g1_mulAccC(p, mload(add(proof_, P_A)), mload(add(proof_, add(P_A, 32))), mload(add(pMem_, P_V1)))) {
+                if iszero(
+                    g1_mulAccC(
+                        p,
+                        mload(add(proof_, P_A)),
+                        mload(add(proof_, add(P_A, 32))),
+                        mload(add(pMem_, P_V1))
+                    )
+                ) {
                     leave
                 }
-                if iszero(g1_mulAccC(p, mload(add(proof_, P_B)), mload(add(proof_, add(P_B, 32))), mload(add(pMem_, P_V2)))) {
+
+                if iszero(
+                    g1_mulAccC(
+                        p,
+                        mload(add(proof_, P_B)),
+                        mload(add(proof_, add(P_B, 32))),
+                        mload(add(pMem_, P_V2))
+                    )
+                ) {
                     leave
                 }
-                if iszero(g1_mulAccC(p, mload(add(proof_, P_C)), mload(add(proof_, add(P_C, 32))), mload(add(pMem_, P_V3)))) {
+
+                if iszero(
+                    g1_mulAccC(
+                        p,
+                        mload(add(proof_, P_C)),
+                        mload(add(proof_, add(P_C, 32))),
+                        mload(add(pMem_, P_V3))
+                    )
+                ) {
                     leave
                 }
+
                 if iszero(g1_mulAccC(p, S1_X, S1_Y, mload(add(pMem_, P_V4)))) {
                     leave
                 }
