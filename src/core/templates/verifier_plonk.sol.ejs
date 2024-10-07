@@ -326,13 +326,13 @@ contract <%=verifier_id%> {
             }
             
             function calculatePI(pMem_, pPub_) {
-                let pl := 0
+                let pi := 0
 
                 for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
-                    pl := mod(
+                    pi := mod(
                         add(
                             sub(
-                                pl,
+                                pi,
                                 mulmod(
                                     mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
                                     mload(add(pPub_, mul(i, 32))),
@@ -345,7 +345,7 @@ contract <%=verifier_id%> {
                     )
                 }
 
-                mstore(add(pMem_, P_PI), pl)
+                mstore(add(pMem_, P_PI), pi)
             }
 
             function calculateR0(pMem_, proof_) {
