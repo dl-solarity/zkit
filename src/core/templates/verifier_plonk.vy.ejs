@@ -312,7 +312,7 @@ def _calculateChallenges(proof: uint256[24], pubSignals: uint256[<%=nPublic%>]) 
     p[P_XIN] = aux
 
     # Zh
-    aux = (aux - 1 + BASE_FIELD_SIZE) % BASE_FIELD_SIZE
+    aux = uint256_addmod(aux, BASE_FIELD_SIZE - 1, BASE_FIELD_SIZE)
     p[P_ZH] = aux
     p[P_ZH_INV] = aux
 
