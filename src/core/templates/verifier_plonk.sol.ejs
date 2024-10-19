@@ -330,16 +330,18 @@ contract <%=verifier_id%> {
                 let pi := 0
 
                 for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
-                    pi := addmod(
-                        sub(
-                            pi,
-                            mulmod(
-                                mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
-                                mload(add(pPub_, mul(i, 32))),
-                                SCALAR_SIZE
-                            )
+                    pi := mod(
+                        add(
+                            sub(
+                                pi,
+                                mulmod(
+                                    mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
+                                    mload(add(pPub_, mul(i, 32))),
+                                    SCALAR_SIZE
+                                )
+                            ),
+                            SCALAR_SIZE
                         ),
-                        SCALAR_SIZE,
                         SCALAR_SIZE
                     )
                 }
