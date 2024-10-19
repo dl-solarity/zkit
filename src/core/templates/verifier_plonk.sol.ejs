@@ -261,7 +261,7 @@ contract <%=verifier_id%> {
                 mstore(add(pMem_, P_XIN), aux)
 
                 // Zh
-                aux := mod(add(sub(aux, 1), SCALAR_SIZE), SCALAR_SIZE)
+                aux := addmod(aux, sub(SCALAR_SIZE, 1), SCALAR_SIZE)
                 mstore(add(pMem_, P_ZH), aux)
                 mstore(add(pMem_, P_ZH_INV), aux) // We will invert later together with lagrange pols
                                 
@@ -330,18 +330,16 @@ contract <%=verifier_id%> {
                 let pi := 0
 
                 for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
-                    pi := mod(
-                        add(
-                            sub(
-                                pi,
-                                mulmod(
-                                    mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
-                                    mload(add(pPub_, mul(i, 32))),
-                                    SCALAR_SIZE
-                                )
-                            ),
-                            SCALAR_SIZE
+                    pi := addmod(
+                        sub(
+                            SCALAR_SIZE,
+                            mulmod(
+                                mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
+                                mload(add(pPub_, mul(i, 32))),
+                                SCALAR_SIZE
+                            )
                         ),
+                        pi,
                         SCALAR_SIZE
                     )
                 }
