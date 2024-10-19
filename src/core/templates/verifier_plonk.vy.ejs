@@ -5,9 +5,9 @@
 # Omega
 W1: constant(uint256) = <%=w%>
 # Scalar field size
-BASE_FIELD_SIZE: constant(uint256) = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+SCALAR_SIZE: constant(uint256) = 21888242871839275222246405745257275088548364400416034343698204186575808495617
 # Base field size
-QF: constant(uint256) = 21888242871839275222246405745257275088696311157297823662689037894645226208583
+BASE_SIZE: constant(uint256) = 21888242871839275222246405745257275088696311157297823662689037894645226208583
 
 # [1]_1
 G1_X: constant(uint256) = 1
@@ -225,13 +225,13 @@ def _inverseArray(pVals: uint256[<%=nPublic + 1%>]) -> uint256[<%=nPublic + 1%>]
 
     for i: uint256 in range(1, <%=nPublic + 1%>):
         pAux[i] = acc
-        acc = uint256_mulmod(acc, pVals[i], BASE_FIELD_SIZE)
+        acc = uint256_mulmod(acc, pVals[i], SCALAR_SIZE)
 
-    inv_total: uint256 = self._inverse(acc, BASE_FIELD_SIZE)
+    inv_total: uint256 = self._inverse(acc, SCALAR_SIZE)
 
     for i: uint256 in range(<%=nPublic%>):
-        inverses[<%=nPublic%> - i] = uint256_mulmod(inv_total, pAux[<%=nPublic%> - i], BASE_FIELD_SIZE)
-        inv_total = uint256_mulmod(inv_total, pVals[<%=nPublic%> - i], BASE_FIELD_SIZE)
+        inverses[<%=nPublic%> - i] = uint256_mulmod(inv_total, pAux[<%=nPublic%> - i], SCALAR_SIZE)
+        inv_total = uint256_mulmod(inv_total, pVals[<%=nPublic%> - i], SCALAR_SIZE)
 
     inverses[0] = inv_total
 
@@ -241,22 +241,22 @@ def _inverseArray(pVals: uint256[<%=nPublic + 1%>]) -> uint256[<%=nPublic + 1%>]
 @pure
 @internal
 def _checkInput(proof: uint256[24]) -> bool:
-    if proof[P_EVAL_A] >= BASE_FIELD_SIZE:
+    if proof[P_EVAL_A] >= SCALAR_SIZE:
         return False
 
-    if proof[P_EVAL_B] >= BASE_FIELD_SIZE:
+    if proof[P_EVAL_B] >= SCALAR_SIZE:
         return False
 
-    if proof[P_EVAL_C] >= BASE_FIELD_SIZE:
+    if proof[P_EVAL_C] >= SCALAR_SIZE:
         return False
 
-    if proof[P_EVAL_S1] >= BASE_FIELD_SIZE:
+    if proof[P_EVAL_S1] >= SCALAR_SIZE:
         return False
 
-    if proof[P_EVAL_S2] >= BASE_FIELD_SIZE:
+    if proof[P_EVAL_S2] >= SCALAR_SIZE:
         return False
 
-    if proof[P_EVAL_ZW] >= BASE_FIELD_SIZE:
+    if proof[P_EVAL_ZW] >= SCALAR_SIZE:
         return False
 
     return True
@@ -271,54 +271,54 @@ def _calculateChallenges(proof: uint256[24], pubSignals: uint256[<%=nPublic%>]) 
         proof[P_A], proof[P_A + 1], proof[P_B], proof[P_B + 1], proof[P_C], proof[P_C + 1],
     ]
 
-    beta: uint256 = convert(keccak256(abi_encode(mIn<%=22+nPublic%>)), uint256) % BASE_FIELD_SIZE
+    beta: uint256 = convert(keccak256(abi_encode(mIn<%=22+nPublic%>)), uint256) % SCALAR_SIZE
 
     p: uint256[P_TOTAL_SIZE] = empty(uint256[P_TOTAL_SIZE])
     p[P_BETA] = beta
 
     # challenges.gamma
-    p[P_GAMMA] = convert(keccak256(abi_encode(p[P_BETA])), uint256) % BASE_FIELD_SIZE
+    p[P_GAMMA] = convert(keccak256(abi_encode(p[P_BETA])), uint256) % SCALAR_SIZE
 
     # challenges.alpha
     mIn4: uint256[4] = [beta, p[P_GAMMA], proof[P_Z], proof[P_Z + 1]]
-    aux: uint256 = convert(keccak256(abi_encode(mIn4)), uint256) % BASE_FIELD_SIZE
+    aux: uint256 = convert(keccak256(abi_encode(mIn4)), uint256) % SCALAR_SIZE
     p[P_ALPHA] = aux
-    p[P_ALPHA2] = uint256_mulmod(aux, aux, BASE_FIELD_SIZE)
+    p[P_ALPHA2] = uint256_mulmod(aux, aux, SCALAR_SIZE)
 
     # challenges.xi
     mIn7: uint256[7] = [aux, proof[P_T1], proof[P_T1 + 1], proof[P_T2], proof[P_T2 + 1], proof[P_T3], proof[P_T3 + 1]]
-    aux = convert(keccak256(abi_encode(mIn7)), uint256) % BASE_FIELD_SIZE
+    aux = convert(keccak256(abi_encode(mIn7)), uint256) % SCALAR_SIZE
     p[P_XI] = aux
 
     # challenges.v
     mIn7 = [
         aux, proof[P_EVAL_A], proof[P_EVAL_B], proof[P_EVAL_C], proof[P_EVAL_S1], proof[P_EVAL_S2], proof[P_EVAL_ZW]
     ]
-    v1: uint256 = convert(keccak256(abi_encode(mIn7)), uint256) % BASE_FIELD_SIZE
+    v1: uint256 = convert(keccak256(abi_encode(mIn7)), uint256) % SCALAR_SIZE
     p[P_V1] = v1
 
     # challenges.v^2, challenges.v^3, challenges.v^4, challenges.v^5
-    p[P_V2] = uint256_mulmod(v1, v1, BASE_FIELD_SIZE)
-    p[P_V3] = uint256_mulmod(p[P_V2], v1, BASE_FIELD_SIZE)
-    p[P_V4] = uint256_mulmod(p[P_V3], v1, BASE_FIELD_SIZE)
-    p[P_V5] = uint256_mulmod(p[P_V4], v1, BASE_FIELD_SIZE)
+    p[P_V2] = uint256_mulmod(v1, v1, SCALAR_SIZE)
+    p[P_V3] = uint256_mulmod(p[P_V2], v1, SCALAR_SIZE)
+    p[P_V4] = uint256_mulmod(p[P_V3], v1, SCALAR_SIZE)
+    p[P_V5] = uint256_mulmod(p[P_V4], v1, SCALAR_SIZE)
 
     # challenges.beta * challenges.xi
-    p[P_BETA_XI] = uint256_mulmod(beta, aux, BASE_FIELD_SIZE)
+    p[P_BETA_XI] = uint256_mulmod(beta, aux, SCALAR_SIZE)
 
     # challenges.xi^n
     <%for (let i = 0; i < power; i++) {%>
-    aux = uint256_mulmod(aux, aux, BASE_FIELD_SIZE)<% } %>
+    aux = uint256_mulmod(aux, aux, SCALAR_SIZE)<% } %>
     p[P_XIN] = aux
 
     # Zh
-    aux = (aux - 1 + BASE_FIELD_SIZE) % BASE_FIELD_SIZE
+    aux = uint256_addmod(aux, SCALAR_SIZE - 1, SCALAR_SIZE)
     p[P_ZH] = aux
     p[P_ZH_INV] = aux
 
     # challenges.u
     mIn4 = [proof[P_WX_I], proof[P_WX_I + 1], proof[P_WX_IW], proof[P_WX_IW + 1]]
-    p[P_U] = convert(keccak256(abi_encode(mIn4)), uint256) % BASE_FIELD_SIZE
+    p[P_U] = convert(keccak256(abi_encode(mIn4)), uint256) % SCALAR_SIZE
 
     return p
 
@@ -326,7 +326,7 @@ def _calculateChallenges(proof: uint256[24], pubSignals: uint256[<%=nPublic%>]) 
 @pure
 @internal
 def _evaluateLagrange(w: uint256, xi: uint256) -> uint256:
-    return uint256_mulmod(N, uint256_addmod(xi, BASE_FIELD_SIZE - w, BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    return uint256_mulmod(N, uint256_addmod(xi, SCALAR_SIZE - w, SCALAR_SIZE), SCALAR_SIZE)
 
 
 @pure
@@ -336,7 +336,7 @@ def _calculateLagrange(p: uint256[P_TOTAL_SIZE]) -> uint256[P_TOTAL_SIZE]:
 
     for i: uint256 in range(1, <%=nPublic + 1%>):
         p[P_EVAL_L1 + (i - 1)] = self._evaluateLagrange(w, p[P_XI])
-        w = uint256_mulmod(w, W1, BASE_FIELD_SIZE)
+        w = uint256_mulmod(w, W1, SCALAR_SIZE)
 
     pointsToInverse: uint256[<%=nPublic + 1%>] = empty(uint256[<%=nPublic + 1%>])
     for i: uint256 in range(<%=nPublic + 1%>):
@@ -352,11 +352,11 @@ def _calculateLagrange(p: uint256[P_TOTAL_SIZE]) -> uint256[P_TOTAL_SIZE]:
 
     for i: uint256 in range(1, <%=nPublic + 1%>):
         p[P_EVAL_L1 + (i - 1)] = uint256_mulmod(
-            uint256_mulmod(p[P_EVAL_L1 + (i - 1)], zh, BASE_FIELD_SIZE),
+            uint256_mulmod(p[P_EVAL_L1 + (i - 1)], zh, SCALAR_SIZE),
             w,
-            BASE_FIELD_SIZE
+            SCALAR_SIZE
         )
-        w = uint256_mulmod(w, W1, BASE_FIELD_SIZE)
+        w = uint256_mulmod(w, W1, SCALAR_SIZE)
 
     return p
 
@@ -369,8 +369,8 @@ def _calculatePI(p: uint256[P_TOTAL_SIZE], pPub: uint256[<%=nPublic%>]) -> uint2
     for i: uint256 in range(<%=nPublic%>):
         pl = uint256_addmod(
             pl,
-            BASE_FIELD_SIZE - uint256_mulmod(p[P_EVAL_L1 + i], pPub[i], BASE_FIELD_SIZE),
-            BASE_FIELD_SIZE
+            SCALAR_SIZE - uint256_mulmod(p[P_EVAL_L1 + i], pPub[i], SCALAR_SIZE),
+            SCALAR_SIZE
         )
 
     return pl
@@ -381,30 +381,30 @@ def _calculatePI(p: uint256[P_TOTAL_SIZE], pPub: uint256[<%=nPublic%>]) -> uint2
 def _calculateR0(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> uint256:
     e1: uint256 = p[P_PI]
 
-    e2: uint256 = uint256_mulmod(p[P_EVAL_L1], p[P_ALPHA2], BASE_FIELD_SIZE)
+    e2: uint256 = uint256_mulmod(p[P_EVAL_L1], p[P_ALPHA2], SCALAR_SIZE)
 
     e3a: uint256 = uint256_addmod(
         proof[P_EVAL_A],
-        uint256_mulmod(p[P_BETA], proof[P_EVAL_S1], BASE_FIELD_SIZE),
-        BASE_FIELD_SIZE
+        uint256_mulmod(p[P_BETA], proof[P_EVAL_S1], SCALAR_SIZE),
+        SCALAR_SIZE
     )
-    e3a = uint256_addmod(e3a, p[P_GAMMA], BASE_FIELD_SIZE)
+    e3a = uint256_addmod(e3a, p[P_GAMMA], SCALAR_SIZE)
 
     e3b: uint256 = uint256_addmod(
         proof[P_EVAL_B],
-        uint256_mulmod(p[P_BETA], proof[P_EVAL_S2], BASE_FIELD_SIZE),
-        BASE_FIELD_SIZE
+        uint256_mulmod(p[P_BETA], proof[P_EVAL_S2], SCALAR_SIZE),
+        SCALAR_SIZE
     )
-    e3b = uint256_addmod(e3b, p[P_GAMMA], BASE_FIELD_SIZE)
+    e3b = uint256_addmod(e3b, p[P_GAMMA], SCALAR_SIZE)
 
-    e3c: uint256 = uint256_addmod(proof[P_EVAL_C], p[P_GAMMA], BASE_FIELD_SIZE)
+    e3c: uint256 = uint256_addmod(proof[P_EVAL_C], p[P_GAMMA], SCALAR_SIZE)
 
-    e3: uint256 = uint256_mulmod(uint256_mulmod(e3a, e3b, BASE_FIELD_SIZE), e3c, BASE_FIELD_SIZE)
-    e3 = uint256_mulmod(e3, proof[P_EVAL_ZW], BASE_FIELD_SIZE)
-    e3 = uint256_mulmod(e3, p[P_ALPHA], BASE_FIELD_SIZE)
+    e3: uint256 = uint256_mulmod(uint256_mulmod(e3a, e3b, SCALAR_SIZE), e3c, SCALAR_SIZE)
+    e3 = uint256_mulmod(e3, proof[P_EVAL_ZW], SCALAR_SIZE)
+    e3 = uint256_mulmod(e3, p[P_ALPHA], SCALAR_SIZE)
 
-    r0: uint256 = uint256_addmod(e1, BASE_FIELD_SIZE - e2, BASE_FIELD_SIZE)
-    return uint256_addmod(r0, BASE_FIELD_SIZE - e3, BASE_FIELD_SIZE)
+    r0: uint256 = uint256_addmod(e1, SCALAR_SIZE - e2, SCALAR_SIZE)
+    return uint256_addmod(r0, SCALAR_SIZE - e3, SCALAR_SIZE)
 
 
 @pure
@@ -424,7 +424,7 @@ def _calculateD(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
     success: bool = True
     pd: uint256[2] = [QC_X, QC_Y]
 
-    success, pd = self._g1_mulAccC(pd, [QM_X, QM_Y], uint256_mulmod(proof[P_EVAL_A], proof[P_EVAL_B], BASE_FIELD_SIZE))
+    success, pd = self._g1_mulAccC(pd, [QM_X, QM_Y], uint256_mulmod(proof[P_EVAL_A], proof[P_EVAL_B], SCALAR_SIZE))
     if not success:
         return (False, [0, 0])
 
@@ -441,61 +441,61 @@ def _calculateD(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
         return (False, [0, 0])
 
     val1: uint256 = uint256_addmod(
-        uint256_addmod(proof[P_EVAL_A], p[P_BETA_XI], BASE_FIELD_SIZE),
+        uint256_addmod(proof[P_EVAL_A], p[P_BETA_XI], SCALAR_SIZE),
         p[P_GAMMA],
-        BASE_FIELD_SIZE
+        SCALAR_SIZE
     )
 
     val2: uint256 = uint256_addmod(
-        uint256_addmod(proof[P_EVAL_B], uint256_mulmod(p[P_BETA_XI], K1, BASE_FIELD_SIZE), BASE_FIELD_SIZE),
+        uint256_addmod(proof[P_EVAL_B], uint256_mulmod(p[P_BETA_XI], K1, SCALAR_SIZE), SCALAR_SIZE),
         p[P_GAMMA],
-        BASE_FIELD_SIZE
+        SCALAR_SIZE
     )
 
     val3: uint256 = uint256_addmod(
-        uint256_addmod(proof[P_EVAL_C], uint256_mulmod(p[P_BETA_XI], K2, BASE_FIELD_SIZE), BASE_FIELD_SIZE),
+        uint256_addmod(proof[P_EVAL_C], uint256_mulmod(p[P_BETA_XI], K2, SCALAR_SIZE), SCALAR_SIZE),
         p[P_GAMMA],
-        BASE_FIELD_SIZE
+        SCALAR_SIZE
     )
 
     d2a: uint256 = uint256_mulmod(
-        uint256_mulmod(uint256_mulmod(val1, val2, BASE_FIELD_SIZE), val3, BASE_FIELD_SIZE),
+        uint256_mulmod(uint256_mulmod(val1, val2, SCALAR_SIZE), val3, SCALAR_SIZE),
         p[P_ALPHA],
-        BASE_FIELD_SIZE
+        SCALAR_SIZE
     )
 
-    d2b: uint256 = uint256_mulmod(p[P_EVAL_L1], p[P_ALPHA2], BASE_FIELD_SIZE)
+    d2b: uint256 = uint256_mulmod(p[P_EVAL_L1], p[P_ALPHA2], SCALAR_SIZE)
 
     mP: uint256[2] = [0, 0]
 
     success, mP = self._ecmul(
         [proof[P_Z], proof[P_Z + 1]],
-        uint256_addmod(uint256_addmod(d2a, d2b, BASE_FIELD_SIZE), p[P_U], BASE_FIELD_SIZE)
+        uint256_addmod(uint256_addmod(d2a, d2b, SCALAR_SIZE), p[P_U], SCALAR_SIZE)
     )
     if not success:
         return (False, [0, 0])
 
     val1 = uint256_addmod(
-        uint256_addmod(proof[P_EVAL_A], uint256_mulmod(p[P_BETA], proof[P_EVAL_S1], BASE_FIELD_SIZE), BASE_FIELD_SIZE),
+        uint256_addmod(proof[P_EVAL_A], uint256_mulmod(p[P_BETA], proof[P_EVAL_S1], SCALAR_SIZE), SCALAR_SIZE),
         p[P_GAMMA],
-        BASE_FIELD_SIZE
+        SCALAR_SIZE
     )
 
     val2 = uint256_addmod(
-        uint256_addmod(proof[P_EVAL_B], uint256_mulmod(p[P_BETA], proof[P_EVAL_S2], BASE_FIELD_SIZE), BASE_FIELD_SIZE),
+        uint256_addmod(proof[P_EVAL_B], uint256_mulmod(p[P_BETA], proof[P_EVAL_S2], SCALAR_SIZE), SCALAR_SIZE),
         p[P_GAMMA],
-        BASE_FIELD_SIZE
+        SCALAR_SIZE
     )
 
     val3 = uint256_mulmod(
-        uint256_mulmod(p[P_ALPHA], p[P_BETA], BASE_FIELD_SIZE),
+        uint256_mulmod(p[P_ALPHA], p[P_BETA], SCALAR_SIZE),
         proof[P_EVAL_ZW],
-        BASE_FIELD_SIZE
+        SCALAR_SIZE
     )
 
     success, mP = self._ecmul(
         [proof[P_Z], proof[P_Z + 1]],
-        uint256_addmod(uint256_addmod(d2a, d2b, BASE_FIELD_SIZE), p[P_U], BASE_FIELD_SIZE)
+        uint256_addmod(uint256_addmod(d2a, d2b, SCALAR_SIZE), p[P_U], SCALAR_SIZE)
     )
     if not success:
         return (False, [0, 0])
@@ -506,9 +506,9 @@ def _calculateD(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
 
     success, mP = self._ecmul(
         [S3_X, S3_Y],
-        uint256_mulmod(uint256_mulmod(val1, val2, BASE_FIELD_SIZE), val3, BASE_FIELD_SIZE)
+        uint256_mulmod(uint256_mulmod(val1, val2, SCALAR_SIZE), val3, SCALAR_SIZE)
     )
-    mP[1] = (QF - mP[1]) % QF
+    mP[1] = (BASE_SIZE - mP[1]) % BASE_SIZE
 
     success, pd = self._ecadd(pd, mP)
     if not success:
@@ -519,13 +519,13 @@ def _calculateD(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
     if not success:
         return (False, [0, 0])
 
-    xin2: uint256 = uint256_mulmod(p[P_XIN], p[P_XIN], BASE_FIELD_SIZE)
+    xin2: uint256 = uint256_mulmod(p[P_XIN], p[P_XIN], SCALAR_SIZE)
     success, pd2 = self._g1_mulAccC(pd2, [proof[P_T3], proof[P_T3 + 1]], xin2)
     if not success:
         return (False, [0, 0])
 
     success, mP = self._ecmul(pd2, p[P_ZH])
-    mP[1] = (QF - mP[1]) % QF
+    mP[1] = (BASE_SIZE - mP[1]) % BASE_SIZE
 
     return self._ecadd(pd, mP)
 
@@ -558,14 +558,14 @@ def _calculateF(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
 @pure
 @internal
 def _calculateE(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[2]):
-    s: uint256 = (BASE_FIELD_SIZE - p[P_EVAL_R0]) % BASE_FIELD_SIZE
+    s: uint256 = (SCALAR_SIZE - p[P_EVAL_R0]) % SCALAR_SIZE
 
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_A], p[P_V1], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_B], p[P_V2], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_C], p[P_V3], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S1], p[P_V4], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S2], p[P_V5], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_ZW], p[P_U], BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_A], p[P_V1], SCALAR_SIZE), SCALAR_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_B], p[P_V2], SCALAR_SIZE), SCALAR_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_C], p[P_V3], SCALAR_SIZE), SCALAR_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S1], p[P_V4], SCALAR_SIZE), SCALAR_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_S2], p[P_V5], SCALAR_SIZE), SCALAR_SIZE)
+    s = uint256_addmod(s, uint256_mulmod(proof[P_EVAL_ZW], p[P_U], SCALAR_SIZE), SCALAR_SIZE)
 
     return self._ecmul([G1_X, G1_Y], s)
 
@@ -589,7 +589,7 @@ def _checkPairing(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> bool:
         return False
 
     mIn[0] = aP[0]
-    mIn[1] = (QF - aP[1]) % QF
+    mIn[1] = (BASE_SIZE - aP[1]) % BASE_SIZE
 
     # [X]_2
     mIn[2] = X2_X2
@@ -605,8 +605,8 @@ def _checkPairing(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> bool:
     mIn[6] = mP[0]
     mIn[7] = mP[1]
 
-    s: uint256 = uint256_mulmod(p[P_U], p[P_XI], BASE_FIELD_SIZE)
-    s = uint256_mulmod(s, W1, BASE_FIELD_SIZE)
+    s: uint256 = uint256_mulmod(p[P_U], p[P_XI], SCALAR_SIZE)
+    s = uint256_mulmod(s, W1, SCALAR_SIZE)
 
     success, mP = self._ecmul([proof[P_WX_IW], proof[P_WX_IW + 1]], s)
     if not success:
@@ -620,7 +620,7 @@ def _checkPairing(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> bool:
     if not success:
         return False
 
-    p[P_E + 1] = (QF - p[P_E + 1]) % QF
+    p[P_E + 1] = (BASE_SIZE - p[P_E + 1]) % BASE_SIZE
 
     success, aP = self._ecadd(aP, [p[P_E], p[P_E + 1]])
     if not success:
