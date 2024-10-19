@@ -94,7 +94,7 @@ P_ZH_INV: constant(uint256) = 24
 
 P_EVAL_L1: constant(uint256) = 25
 
-P_TOTAL_SIZE: constant(uint256) = <%=25+nPublic%>
+P_TOTAL_SIZE: constant(uint256) = <%=25 + nPublic%>
 
 EC_ADD_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000006
 EC_MUL_PRECOMPILED_ADDRESS: constant(address) = 0x0000000000000000000000000000000000000007
@@ -218,12 +218,12 @@ def _inverse(a: uint256, q: uint256) -> uint256:
 
 @pure
 @internal
-def _inverseArray(pVals: uint256[<%=nPublic+1%>]) -> uint256[<%=nPublic+1%>]:
+def _inverseArray(pVals: uint256[<%=nPublic + 1%>]) -> uint256[<%=nPublic + 1%>]:
     acc: uint256 = pVals[0]
-    inverses: uint256[<%=nPublic+1%>] = empty(uint256[<%=nPublic+1%>])
-    pAux: uint256[<%=nPublic+1%>] = empty(uint256[<%=nPublic+1%>])
+    inverses: uint256[<%=nPublic + 1%>] = empty(uint256[<%=nPublic + 1%>])
+    pAux: uint256[<%=nPublic + 1%>] = empty(uint256[<%=nPublic + 1%>])
 
-    for i: uint256 in range(1, <%=nPublic+1%>):
+    for i: uint256 in range(1, <%=nPublic + 1%>):
         pAux[i] = acc
         acc = uint256_mulmod(acc, pVals[i], BASE_FIELD_SIZE)
 
@@ -265,7 +265,7 @@ def _checkInput(proof: uint256[24]) -> bool:
 @pure
 @internal
 def _calculateChallenges(proof: uint256[24], pubSignals: uint256[<%=nPublic%>]) -> uint256[P_TOTAL_SIZE]:
-    mIn<%=22+nPublic%>: uint256[<%=22+nPublic%>] = [
+    mIn<%=22 + nPublic%>: uint256[<%=22 + nPublic%>] = [
         QM_X, QM_Y, QL_X, QL_Y, QR_X, QR_Y, QO_X, QO_Y, QC_X, QC_Y, S1_X, S1_Y, S2_X, S2_Y, S3_X, S3_Y,
         <% for (let i = 0; i < nPublic; i++) { %>pubSignals[<%=i%>], <% } %>
         proof[P_A], proof[P_A + 1], proof[P_B], proof[P_B + 1], proof[P_C], proof[P_C + 1],
@@ -307,7 +307,7 @@ def _calculateChallenges(proof: uint256[24], pubSignals: uint256[<%=nPublic%>]) 
     p[P_BETA_XI] = uint256_mulmod(beta, aux, BASE_FIELD_SIZE)
 
     # challenges.xi^n
-    <%for (let i=0; i<power;i++) {%>
+    <%for (let i = 0; i < power; i++) {%>
     aux = uint256_mulmod(aux, aux, BASE_FIELD_SIZE)<% } %>
     p[P_XIN] = aux
 
@@ -334,23 +334,23 @@ def _evaluateLagrange(w: uint256, xi: uint256) -> uint256:
 def _calculateLagrange(p: uint256[P_TOTAL_SIZE]) -> uint256[P_TOTAL_SIZE]:
     w: uint256 = 1
 
-    for i: uint256 in range(1, <%=nPublic+1%>):
+    for i: uint256 in range(1, <%=nPublic + 1%>):
         p[P_EVAL_L1 + (i - 1)] = self._evaluateLagrange(w, p[P_XI])
         w = uint256_mulmod(w, W1, BASE_FIELD_SIZE)
 
-    pointsToInverse: uint256[<%=nPublic+1%>] = empty(uint256[<%=nPublic+1%>])
-    for i: uint256 in range(<%=nPublic+1%>):
+    pointsToInverse: uint256[<%=nPublic + 1%>] = empty(uint256[<%=nPublic + 1%>])
+    for i: uint256 in range(<%=nPublic + 1%>):
         pointsToInverse[i] = p[P_ZH_INV + i]
 
-    inverses: uint256[<%=nPublic+1%>] = self._inverseArray(pointsToInverse)
+    inverses: uint256[<%=nPublic + 1%>] = self._inverseArray(pointsToInverse)
 
-    for i: uint256 in range(<%=nPublic+1%>):
+    for i: uint256 in range(<%=nPublic + 1%>):
         p[P_ZH_INV + i] = inverses[i]
 
     zh: uint256 = p[P_ZH]
     w = 1
 
-    for i: uint256 in range(1, <%=nPublic+1%>):
+    for i: uint256 in range(1, <%=nPublic + 1%>):
         p[P_EVAL_L1 + (i - 1)] = uint256_mulmod(
             uint256_mulmod(p[P_EVAL_L1 + (i - 1)], zh, BASE_FIELD_SIZE),
             w,

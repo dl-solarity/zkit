@@ -22,7 +22,7 @@ DELTA_Y1: constant(uint256) = <%=vk_delta_2[1][1]%>
 DELTA_Y2: constant(uint256) = <%=vk_delta_2[1][0] -%>
 
 
-IC: constant(uint256[<%=IC.length%>][2]) = [
+IC: constant(uint256[2][<%=IC.length%>]) = [
 <% IC.forEach(function(innerArray, index) { %>  [
     <%= innerArray[0] %>,
     <%= innerArray[1] %>
@@ -36,7 +36,7 @@ EC_PAIRING_PRECOMPILED_ADDRESS: constant(address) = 0x00000000000000000000000000
 
 @view
 @external
-def verifyProof(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], publicSignals: uint256[<%=IC.length-1%>]) -> bool:
+def verifyProof(pointA: uint256[2], pointB: uint256[2][2], pointC: uint256[2], publicSignals: uint256[<%=IC.length - 1%>]) -> bool:
     # @dev check that all public signals are in F
     for signal: uint256 in publicSignals:
         if signal >= BASE_FIELD_SIZE:
@@ -84,7 +84,7 @@ def _g1MulAdd(pR: uint256[2], pP: uint256[2], s: uint256) -> (bool, uint256[2]):
 
 @view
 @internal
-def _checkPairing(pA: uint256[2], pB: uint256[2][2], pC: uint256[2], pubSignals: uint256[<%=IC.length-1%>]) -> bool:
+def _checkPairing(pA: uint256[2], pB: uint256[2][2], pC: uint256[2], pubSignals: uint256[<%=IC.length - 1%>]) -> bool:
     success: bool = True
     mulAddResult: uint256[2] = IC[0]
 
