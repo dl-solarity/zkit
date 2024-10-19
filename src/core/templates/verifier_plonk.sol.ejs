@@ -8,9 +8,9 @@ contract <%=verifier_id%> {
     // Omega
     uint256 constant W1 = <%=w%>;
     // Scalar field size
-    uint256 constant BASE_FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+    uint256 constant SCALAR_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     // Base field size
-    uint256 constant QF = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+    uint256 constant BASE_SIZE = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
     
     // [1]_1
     uint256 constant G1_X = 1;
@@ -50,51 +50,51 @@ contract <%=verifier_id%> {
     // Proof values offsets
     // Byte offset of every parameter of the proof array
     // Polynomial commitments
-    uint16 constant P_A       = 0;
-    uint16 constant P_B       = 64;
-    uint16 constant P_C       = 128;
-    uint16 constant P_Z       = 192;
-    uint16 constant P_T1      = 256;
-    uint16 constant P_T2      = 320;
-    uint16 constant P_T3      = 384;
-    uint16 constant P_WX_I    = 448;
-    uint16 constant P_WX_IW   = 512;
+    uint256 constant P_A       = 0;
+    uint256 constant P_B       = 64;
+    uint256 constant P_C       = 128;
+    uint256 constant P_Z       = 192;
+    uint256 constant P_T1      = 256;
+    uint256 constant P_T2      = 320;
+    uint256 constant P_T3      = 384;
+    uint256 constant P_WX_I    = 448;
+    uint256 constant P_WX_IW   = 512;
     // Opening evaluations
-    uint16 constant P_EVAL_A  = 576;
-    uint16 constant P_EVAL_B  = 608;
-    uint16 constant P_EVAL_C  = 640;
-    uint16 constant P_EVAL_S1 = 672;
-    uint16 constant P_EVAL_S2 = 704;
-    uint16 constant P_EVAL_ZW = 736;
+    uint256 constant P_EVAL_A  = 576;
+    uint256 constant P_EVAL_B  = 608;
+    uint256 constant P_EVAL_C  = 640;
+    uint256 constant P_EVAL_S1 = 672;
+    uint256 constant P_EVAL_S2 = 704;
+    uint256 constant P_EVAL_ZW = 736;
 
     // Memory data
     // Challenges
-    uint16 constant P_ALPHA   = 0;
-    uint16 constant P_BETA    = 32;
-    uint16 constant P_GAMMA   = 64;
-    uint16 constant P_XI      = 96;
-    uint16 constant P_XIN     = 128;
-    uint16 constant P_BETA_XI = 160;
-    uint16 constant P_V1      = 192;
-    uint16 constant P_V2      = 224;
-    uint16 constant P_V3      = 256;
-    uint16 constant P_V4      = 288;
-    uint16 constant P_V5      = 320;
-    uint16 constant P_U       = 352;
+    uint256 constant P_ALPHA   = 0;
+    uint256 constant P_BETA    = 32;
+    uint256 constant P_GAMMA   = 64;
+    uint256 constant P_XI      = 96;
+    uint256 constant P_XIN     = 128;
+    uint256 constant P_BETA_XI = 160;
+    uint256 constant P_V1      = 192;
+    uint256 constant P_V2      = 224;
+    uint256 constant P_V3      = 256;
+    uint256 constant P_V4      = 288;
+    uint256 constant P_V5      = 320;
+    uint256 constant P_U       = 352;
     
-    uint16 constant P_PI      = 384;
-    uint16 constant P_EVAL_R0 = 416;
-    uint16 constant P_D       = 448;
-    uint16 constant P_F       = 512;
-    uint16 constant P_E       = 576;
-    uint16 constant P_TMP     = 640;
-    uint16 constant P_ALPHA2  = 704;
-    uint16 constant P_ZH      = 736;
-    uint16 constant P_ZH_INV  = 768;
+    uint256 constant P_PI      = 384;
+    uint256 constant P_EVAL_R0 = 416;
+    uint256 constant P_D       = 448;
+    uint256 constant P_F       = 512;
+    uint256 constant P_E       = 576;
+    uint256 constant P_TMP     = 640;
+    uint256 constant P_ALPHA2  = 704;
+    uint256 constant P_ZH      = 736;
+    uint256 constant P_ZH_INV  = 768;
 
-    uint16 constant P_EVAL_L1 = 800;
+    uint256 constant P_EVAL_L1 = 800;
     <% let pLastMem = 800+32*nPublic %>
-    uint16 constant P_TOTAL_SIZE = <%=pLastMem%>;
+    uint256 constant P_TOTAL_SIZE = <%=pLastMem%>;
 
     function verifyProof(
         uint256[24] memory proofArr_,
@@ -106,13 +106,13 @@ contract <%=verifier_id%> {
                 let newt := 1
                 let r := q_
                 let newr := a_
-                let quotient
-                let aux
+                let quotient := 0
+                let aux := 0
                 
                 for { } newr { } {
                     quotient := sdiv(r, newr)
                     aux := sub(t, mul(quotient, newt))
-                    t:= newt
+                    t := newt
                     newt:= aux
                     
                     aux := sub(r,mul(quotient, newr))
@@ -129,10 +129,10 @@ contract <%=verifier_id%> {
             function inverseArray(pVals_, n_) {
                 let pAux := mload(64)       // Point to the next free position
                 let pIn := pVals_
-                let lastPIn := add(pVals_, mul(n_, 32))  // Read n elemnts
+                let lastPIn := add(pVals_, mul(n_, 32))  // Read n elements
                 let acc := mload(pIn)       // Read the first element
                 pIn := add(pIn, 32)         // Point to the second element
-                let inv
+                let inv := 0
     
                 for { } lt(pIn, lastPIn) {
                     pAux := add(pAux, 32)
@@ -140,30 +140,32 @@ contract <%=verifier_id%> {
                 } 
                 {
                     mstore(pAux, acc)
-                    acc := mulmod(acc, mload(pIn), BASE_FIELD_SIZE)
+                    acc := mulmod(acc, mload(pIn), SCALAR_SIZE)
                 }
-                acc := inverse(acc, BASE_FIELD_SIZE)
 
-                // At this point pAux pint to the next free position we substract 1 to point to the last used
+                acc := inverse(acc, SCALAR_SIZE)
+
+                // At this point pAux point to the next free position, we subtract 1 to point to the last used
                 pAux := sub(pAux, 32)
-                // pIn points to the n+1 element, we substract to point to n
+                // pIn points to the n+1 element, we subtract to point to n
                 pIn := sub(pIn, 32)
-                lastPIn := pVals_  // We don't process the first element 
+                lastPIn := pVals_ // We don't process the first element 
+
                 for { } gt(pIn, lastPIn) {
                     pAux := sub(pAux, 32)
                     pIn := sub(pIn, 32)
                 } 
                 {
-                    inv := mulmod(acc, mload(pAux), BASE_FIELD_SIZE)
-                    acc := mulmod(acc, mload(pIn), BASE_FIELD_SIZE)
+                    inv := mulmod(acc, mload(pAux), SCALAR_SIZE)
+                    acc := mulmod(acc, mload(pIn), SCALAR_SIZE)
                     mstore(pIn, inv)
                 }
-                // pIn points to first element, we just set it.
+                // pIn points to first element, we just set it
                 mstore(pIn, acc)
             }
 
             function checkField(signal_) -> res_ {
-                res_ := lt(signal_, BASE_FIELD_SIZE)
+                res_ := lt(signal_, SCALAR_SIZE)
             }
 
             function checkInput(proof_) -> res_ {
@@ -176,9 +178,8 @@ contract <%=verifier_id%> {
             }
             
             function calculateChallenges(pMem_, proof_, pubSignals_) {
-                let beta
-                let aux
-
+                let beta := 0
+                let aux := 0
                 let mIn := mload(64)     // Pointer to the next free memory position
 
                 // Compute challenge.beta & challenge.gamma
@@ -199,22 +200,22 @@ contract <%=verifier_id%> {
                 mstore(add(mIn, 448), S3_X)
                 mstore(add(mIn, 480), S3_Y)
 
-                <%for (let i = 0; i < nPublic; i++) {%>mstore(add(mIn, <%= 512 + i*32 %>), mload(add(pubSignals_, <%=i*32%>)))
-                <%}%>
-                mstore(add(mIn, <%= 512 + nPublic*32 %>), mload(add(proof_, P_A)))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 32 %>), mload(add(proof_, add(P_A, 32))))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 64 %>), mload(add(proof_, P_B)))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 96 %>), mload(add(proof_, add(P_B, 32))))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 128 %>), mload(add(proof_, P_C)))
-                mstore(add(mIn, <%= 512 + nPublic*32 + 160 %>), mload(add(proof_, add(P_C, 32))))
+                <% for (let i = 0; i < nPublic; i++) {%>mstore(add(mIn, <%=512 + i * 32%>), mload(add(pubSignals_, <%=i * 32%>)))
+                <% } %>
+                mstore(add(mIn, <%=512 + nPublic * 32%>), mload(add(proof_, P_A)))
+                mstore(add(mIn, <%=512 + nPublic * 32 + 32%>), mload(add(proof_, add(P_A, 32))))
+                mstore(add(mIn, <%=512 + nPublic * 32 + 64%>), mload(add(proof_, P_B)))
+                mstore(add(mIn, <%=512 + nPublic * 32 + 96%>), mload(add(proof_, add(P_B, 32))))
+                mstore(add(mIn, <%=512 + nPublic * 32 + 128%>), mload(add(proof_, P_C)))
+                mstore(add(mIn, <%=512 + nPublic * 32 + 160%>), mload(add(proof_, add(P_C, 32))))
                 
-                beta := mod(keccak256(mIn, <%= 704 + 32 * nPublic %>), BASE_FIELD_SIZE) 
+                beta := mod(keccak256(mIn, <%=704 + 32 * nPublic%>), SCALAR_SIZE) 
                 mstore(add(pMem_, P_BETA), beta)
 
                 // challenges.gamma
                 mstore(
                     add(pMem_, P_GAMMA),
-                    mod(keccak256(add(pMem_, P_BETA), 32), BASE_FIELD_SIZE)
+                    mod(keccak256(add(pMem_, P_BETA), 32), SCALAR_SIZE)
                 )
                 
                 // challenges.alpha
@@ -223,9 +224,9 @@ contract <%=verifier_id%> {
                 mstore(add(mIn, 64), mload(add(proof_, P_Z)))
                 mstore(add(mIn, 96), mload(add(proof_, add(P_Z, 32))))
 
-                aux := mod(keccak256(mIn, 128), BASE_FIELD_SIZE)
+                aux := mod(keccak256(mIn, 128), SCALAR_SIZE)
                 mstore(add(pMem_, P_ALPHA), aux)
-                mstore(add(pMem_, P_ALPHA2), mulmod(aux, aux, BASE_FIELD_SIZE))
+                mstore(add(pMem_, P_ALPHA2), mulmod(aux, aux, SCALAR_SIZE))
 
                 // challenges.xi
                 mstore(mIn, aux)
@@ -236,7 +237,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn, 160), mload(add(proof_, P_T3)))
                 mstore(add(mIn, 192), mload(add(proof_, add(P_T3, 32))))
 
-                aux := mod(keccak256(mIn, 224), BASE_FIELD_SIZE)
+                aux := mod(keccak256(mIn, 224), SCALAR_SIZE)
                 mstore(add(pMem_, P_XI), aux)
 
                 // challenges.v
@@ -248,30 +249,30 @@ contract <%=verifier_id%> {
                 mstore(add(mIn, 160), mload(add(proof_, P_EVAL_S2)))
                 mstore(add(mIn, 192), mload(add(proof_, P_EVAL_ZW)))
 
-                let v1 := mod(keccak256(mIn, 224), BASE_FIELD_SIZE)
+                let v1 := mod(keccak256(mIn, 224), SCALAR_SIZE)
                 mstore(add(pMem_, P_V1), v1)
 
                 // challenges.beta * challenges.xi
-                mstore(add(pMem_, P_BETA_XI), mulmod(beta, aux, BASE_FIELD_SIZE))
+                mstore(add(pMem_, P_BETA_XI), mulmod(beta, aux, SCALAR_SIZE))
 
                 // challenges.xi^n
-                <%for (let i=0; i<power;i++) {%>aux := mulmod(aux, aux, BASE_FIELD_SIZE)
-                <%}%>
+                <% for (let i = 0; i < power; i++) {%>aux := mulmod(aux, aux, SCALAR_SIZE)
+                <% } %>
                 mstore(add(pMem_, P_XIN), aux)
 
                 // Zh
-                aux:= mod(add(sub(aux, 1), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+                aux := mod(add(sub(aux, 1), SCALAR_SIZE), SCALAR_SIZE)
                 mstore(add(pMem_, P_ZH), aux)
-                mstore(add(pMem_, P_ZH_INV), aux)  // We will invert later together with lagrange pols
+                mstore(add(pMem_, P_ZH_INV), aux) // We will invert later together with lagrange pols
                                 
                 // challenges.v^2, challenges.v^3, challenges.v^4, challenges.v^5
-                aux := mulmod(v1, v1, BASE_FIELD_SIZE)
+                aux := mulmod(v1, v1, SCALAR_SIZE)
                 mstore(add(pMem_, P_V2), aux)
-                aux := mulmod(aux, v1, BASE_FIELD_SIZE)
+                aux := mulmod(aux, v1, SCALAR_SIZE)
                 mstore(add(pMem_, P_V3), aux)
-                aux := mulmod(aux, v1, BASE_FIELD_SIZE)
+                aux := mulmod(aux, v1, SCALAR_SIZE)
                 mstore(add(pMem_, P_V4), aux)
-                aux := mulmod(aux, v1, BASE_FIELD_SIZE)
+                aux := mulmod(aux, v1, SCALAR_SIZE)
                 mstore(add(pMem_, P_V5), aux)
 
                 // challenges.u
@@ -280,7 +281,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn, 64), mload(add(proof_, P_WX_IW)))
                 mstore(add(mIn, 96), mload(add(proof_, add(P_WX_IW, 32))))
 
-                mstore(add(pMem_, P_U), mod(keccak256(mIn, 128), BASE_FIELD_SIZE))
+                mstore(add(pMem_, P_U), mod(keccak256(mIn, 128), SCALAR_SIZE))
             }
             
             function calculateLagrange(pMem_) {
@@ -292,17 +293,17 @@ contract <%=verifier_id%> {
                         mulmod(
                             N,
                             mod(
-                                add(sub(mload(add(pMem_, P_XI)), w), BASE_FIELD_SIZE),
-                                BASE_FIELD_SIZE
+                                add(sub(mload(add(pMem_, P_XI)), w), SCALAR_SIZE),
+                                SCALAR_SIZE
                             ),
-                            BASE_FIELD_SIZE
+                            SCALAR_SIZE
                         )
                     )
 
-                    w := mulmod(w, W1, BASE_FIELD_SIZE)
+                    w := mulmod(w, W1, SCALAR_SIZE)
                 }
 
-                inverseArray(add(pMem_, P_ZH_INV), <%=nPublic+1%>)
+                inverseArray(add(pMem_, P_ZH_INV), <%=nPublic + 1%>)
                 
                 let zh := mload(add(pMem_, P_ZH))
                 w := 1
@@ -315,13 +316,13 @@ contract <%=verifier_id%> {
                             mulmod(
                                 mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
                                 zh,
-                                BASE_FIELD_SIZE
+                                SCALAR_SIZE
                             ),
-                            BASE_FIELD_SIZE
+                            SCALAR_SIZE
                         )
                     )
 
-                    w := mulmod(w, W1, BASE_FIELD_SIZE)
+                    w := mulmod(w, W1, SCALAR_SIZE)
                 }
             }
             
@@ -329,19 +330,17 @@ contract <%=verifier_id%> {
                 let pi := 0
 
                 for { let i := 0 } lt(i, <%=nPublic%>) { i := add(i, 1) } {
-                    pi := mod(
-                        add(
-                            sub(
-                                pi,
-                                mulmod(
-                                    mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
-                                    mload(add(pPub_, mul(i, 32))),
-                                    BASE_FIELD_SIZE
-                                )
-                            ),
-                            BASE_FIELD_SIZE
+                    pi := addmod(
+                        sub(
+                            pi,
+                            mulmod(
+                                mload(add(pMem_, add(P_EVAL_L1, mul(i, 32)))),
+                                mload(add(pPub_, mul(i, 32))),
+                                SCALAR_SIZE
+                            )
                         ),
-                        BASE_FIELD_SIZE
+                        SCALAR_SIZE,
+                        SCALAR_SIZE
                     )
                 }
 
@@ -354,7 +353,7 @@ contract <%=verifier_id%> {
                 let e2 := mulmod(
                     mload(add(pMem_, P_EVAL_L1)),
                     mload(add(pMem_, P_ALPHA2)),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 let e3a := addmod(
@@ -362,41 +361,41 @@ contract <%=verifier_id%> {
                     mulmod(
                         mload(add(pMem_, P_BETA)),
                         mload(add(proof_, P_EVAL_S1)),
-                        BASE_FIELD_SIZE
+                        SCALAR_SIZE
                     ),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
-                e3a := addmod(e3a, mload(add(pMem_, P_GAMMA)), BASE_FIELD_SIZE)
+                e3a := addmod(e3a, mload(add(pMem_, P_GAMMA)), SCALAR_SIZE)
 
                 let e3b := addmod(
                     mload(add(proof_, P_EVAL_B)),
                     mulmod(
                         mload(add(pMem_, P_BETA)),
                         mload(add(proof_, P_EVAL_S2)),
-                        BASE_FIELD_SIZE
+                        SCALAR_SIZE
                     ),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
-                e3b := addmod(e3b, mload(add(pMem_, P_GAMMA)), BASE_FIELD_SIZE)
+                e3b := addmod(e3b, mload(add(pMem_, P_GAMMA)), SCALAR_SIZE)
 
                 let e3c := addmod(
                     mload(add(proof_, P_EVAL_C)),
                     mload(add(pMem_, P_GAMMA)),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
-                let e3 := mulmod(mulmod(e3a, e3b, BASE_FIELD_SIZE), e3c, BASE_FIELD_SIZE)
-                e3 := mulmod(e3, mload(add(proof_, P_EVAL_ZW)), BASE_FIELD_SIZE)
-                e3 := mulmod(e3, mload(add(pMem_, P_ALPHA)), BASE_FIELD_SIZE)
+                let e3 := mulmod(mulmod(e3a, e3b, SCALAR_SIZE), e3c, SCALAR_SIZE)
+                e3 := mulmod(e3, mload(add(proof_, P_EVAL_ZW)), SCALAR_SIZE)
+                e3 := mulmod(e3, mload(add(pMem_, P_ALPHA)), SCALAR_SIZE)
             
                 let r0 := addmod(
                     e1,
-                    mod(sub(BASE_FIELD_SIZE, e2), BASE_FIELD_SIZE),
-                    BASE_FIELD_SIZE
+                    mod(sub(SCALAR_SIZE, e2), SCALAR_SIZE),
+                    SCALAR_SIZE
                 )
-                r0 := addmod(r0, mod(sub(BASE_FIELD_SIZE, e3), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+                r0 := addmod(r0, mod(sub(SCALAR_SIZE, e3), SCALAR_SIZE), SCALAR_SIZE)
                 
-                mstore(add(pMem_, P_EVAL_R0) , r0)
+                mstore(add(pMem_, P_EVAL_R0), r0)
             }
             
             function g1_set(pR_, pP_) {
@@ -451,10 +450,10 @@ contract <%=verifier_id%> {
             }
 
             function calculateD(pMem_, proof_) -> isOk_ {
-                let _pD:= add(pMem_, P_D)
+                let _pD := add(pMem_, P_D)
                 let gamma := mload(add(pMem_, P_GAMMA))
                 let mIn := mload(64)
-                mstore(64, add(mIn, 256)) // d1, d2, d3 & d4 (4*64 bytes)
+                mstore(64, add(mIn, 256)) // d1, d2, d3 & d4 (4 * 64 bytes)
 
                 g1_setC(_pD, QC_X, QC_Y)
 
@@ -464,7 +463,7 @@ contract <%=verifier_id%> {
                         mulmod(
                             mload(add(proof_, P_EVAL_A)),
                             mload(add(proof_, P_EVAL_B)),
-                            BASE_FIELD_SIZE
+                            SCALAR_SIZE
                         )
                     )
                 ) {
@@ -482,41 +481,41 @@ contract <%=verifier_id%> {
 
                 let betaxi := mload(add(pMem_, P_BETA_XI))
                 let val1 := addmod(
-                    addmod(mload(add(proof_, P_EVAL_A)), betaxi, BASE_FIELD_SIZE),
+                    addmod(mload(add(proof_, P_EVAL_A)), betaxi, SCALAR_SIZE),
                     gamma,
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 let val2 := addmod(
                     addmod(
                         mload(add(proof_, P_EVAL_B)),
-                        mulmod(betaxi, K1, BASE_FIELD_SIZE),
-                        BASE_FIELD_SIZE
+                        mulmod(betaxi, K1, SCALAR_SIZE),
+                        SCALAR_SIZE
                     ),
                     gamma,
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 let val3 := addmod(
                     addmod(
                         mload(add(proof_, P_EVAL_C)),
-                        mulmod(betaxi, K2, BASE_FIELD_SIZE),
-                        BASE_FIELD_SIZE
+                        mulmod(betaxi, K2, SCALAR_SIZE),
+                        SCALAR_SIZE
                     ),
                     gamma,
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 let d2a := mulmod(
-                    mulmod(mulmod(val1, val2, BASE_FIELD_SIZE), val3, BASE_FIELD_SIZE),
+                    mulmod(mulmod(val1, val2, SCALAR_SIZE), val3, SCALAR_SIZE),
                     mload(add(pMem_, P_ALPHA)),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 let d2b := mulmod(
                     mload(add(pMem_, P_EVAL_L1)),
                     mload(add(pMem_, P_ALPHA2)),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 // We'll use mIn to save d2
@@ -527,9 +526,9 @@ contract <%=verifier_id%> {
                         mIn,
                         add(mIn, 192),
                         addmod(
-                            addmod(d2a, d2b, BASE_FIELD_SIZE),
+                            addmod(d2a, d2b, SCALAR_SIZE),
                             mload(add(pMem_, P_U)),
-                            BASE_FIELD_SIZE
+                            SCALAR_SIZE
                         )
                     )
                 ) {
@@ -542,12 +541,12 @@ contract <%=verifier_id%> {
                         mulmod(
                             mload(add(pMem_, P_BETA)),
                             mload(add(proof_, P_EVAL_S1)),
-                            BASE_FIELD_SIZE
+                            SCALAR_SIZE
                         ),
-                        BASE_FIELD_SIZE
+                        SCALAR_SIZE
                     ),
                     gamma,
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 val2 := addmod(
@@ -556,26 +555,25 @@ contract <%=verifier_id%> {
                         mulmod(
                             mload(add(pMem_, P_BETA)),
                             mload(add(proof_, P_EVAL_S2)),
-                            BASE_FIELD_SIZE
+                            SCALAR_SIZE
                         ),
-                        BASE_FIELD_SIZE
+                        SCALAR_SIZE
                     ),
                     gamma,
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
-    
+
                 val3 := mulmod(
-                    mulmod(mload(add(pMem_, P_ALPHA)), mload(add(pMem_, P_BETA)), BASE_FIELD_SIZE),
+                    mulmod(mload(add(pMem_, P_ALPHA)), mload(add(pMem_, P_BETA)), SCALAR_SIZE),
                     mload(add(proof_, P_EVAL_ZW)),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
-    
 
                 // We'll use mIn + 64 to save d3
                 if iszero(
                     g1_mulSetC(
                         add(mIn, 64), S3_X, S3_Y,
-                        mulmod(mulmod(val1, val2, BASE_FIELD_SIZE), val3, BASE_FIELD_SIZE)
+                        mulmod(mulmod(val1, val2, SCALAR_SIZE), val3, SCALAR_SIZE)
                     )
                 ) {
                     leave
@@ -598,7 +596,7 @@ contract <%=verifier_id%> {
                 let xin2 := mulmod(
                     mload(add(pMem_, P_XIN)),
                     mload(add(pMem_, P_XIN)),
-                    BASE_FIELD_SIZE
+                    SCALAR_SIZE
                 )
 
                 if iszero(
@@ -623,8 +621,8 @@ contract <%=verifier_id%> {
                     leave
                 }
 
-                mstore(add(add(mIn, 64), 32), mod(sub(QF, mload(add(add(mIn, 64), 32))), QF))
-                mstore(add(mIn, 160), mod(sub(QF, mload(add(mIn, 160))), QF))
+                mstore(add(add(mIn, 64), 32), mod(sub(BASE_SIZE, mload(add(add(mIn, 64), 32))), BASE_SIZE))
+                mstore(add(mIn, 160), mod(sub(BASE_SIZE, mload(add(mIn, 160))), BASE_SIZE))
 
                 if iszero(g1_acc(_pD, mIn)) { leave }
                 if iszero(g1_acc(_pD, add(mIn, 64))) { leave }
@@ -682,14 +680,14 @@ contract <%=verifier_id%> {
             }
             
             function calculateE(pMem_, proof_) -> isOk_ {
-                let s := mod(sub(BASE_FIELD_SIZE, mload(add(pMem_, P_EVAL_R0))), BASE_FIELD_SIZE)
+                let s := mod(sub(SCALAR_SIZE, mload(add(pMem_, P_EVAL_R0))), SCALAR_SIZE)
 
-                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_A)),  mload(add(pMem_, P_V1)), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_B)),  mload(add(pMem_, P_V2)), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_C)),  mload(add(pMem_, P_V3)), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_S1)), mload(add(pMem_, P_V4)), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_S2)), mload(add(pMem_, P_V5)), BASE_FIELD_SIZE), BASE_FIELD_SIZE)
-                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_ZW)), mload(add(pMem_, P_U)),  BASE_FIELD_SIZE), BASE_FIELD_SIZE)
+                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_A)),  mload(add(pMem_, P_V1)), SCALAR_SIZE), SCALAR_SIZE)
+                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_B)),  mload(add(pMem_, P_V2)), SCALAR_SIZE), SCALAR_SIZE)
+                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_C)),  mload(add(pMem_, P_V3)), SCALAR_SIZE), SCALAR_SIZE)
+                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_S1)), mload(add(pMem_, P_V4)), SCALAR_SIZE), SCALAR_SIZE)
+                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_S2)), mload(add(pMem_, P_V5)), SCALAR_SIZE), SCALAR_SIZE)
+                s := addmod(s, mulmod(mload(add(proof_, P_EVAL_ZW)), mload(add(pMem_, P_U)),  SCALAR_SIZE), SCALAR_SIZE)
 
                 isOk_ := g1_mulSetC(add(pMem_, P_E), G1_X, G1_Y, s)
             }
@@ -712,7 +710,7 @@ contract <%=verifier_id%> {
                 if iszero(g1_acc(mIn, _pWxi)) {
                     leave
                 }
-                mstore(add(mIn, 32), mod(sub(QF, mload(add(mIn, 32))), QF))
+                mstore(add(mIn, 32), mod(sub(BASE_SIZE, mload(add(mIn, 32))), BASE_SIZE))
 
                 // [X]_2
                 mstore(add(mIn,64), X2_X2)
@@ -725,8 +723,9 @@ contract <%=verifier_id%> {
                     leave
                 }
 
-                let s := mulmod(mload(add(pMem_, P_U)), mload(add(pMem_, P_XI)), BASE_FIELD_SIZE)
-                s := mulmod(s, W1, BASE_FIELD_SIZE)
+                let s := mulmod(mload(add(pMem_, P_U)), mload(add(pMem_, P_XI)), SCALAR_SIZE)
+                s := mulmod(s, W1, SCALAR_SIZE)
+
                 if iszero(g1_mulSet(_aux, _pWxiw, s)) {
                     leave
                 }
@@ -737,7 +736,8 @@ contract <%=verifier_id%> {
                     leave
                 }
 
-                mstore(add(pMem_, add(P_E, 32)), mod(sub(QF, mload(add(pMem_, add(P_E, 32)))), QF))
+                mstore(add(pMem_, add(P_E, 32)), mod(sub(BASE_SIZE, mload(add(pMem_, add(P_E, 32)))), BASE_SIZE))
+
                 if iszero(g1_acc(add(mIn, 192), add(pMem_, P_E))) {
                     leave
                 }
