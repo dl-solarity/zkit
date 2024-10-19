@@ -508,9 +508,7 @@ def _calculateD(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
         [S3_X, S3_Y],
         uint256_mulmod(uint256_mulmod(val1, val2, SCALAR_SIZE), val3, SCALAR_SIZE)
     )
-    mP[1] = (BASE_SIZE
- - mP[1]) % BASE_SIZE
-
+    mP[1] = (BASE_SIZE - mP[1]) % BASE_SIZE
 
     success, pd = self._ecadd(pd, mP)
     if not success:
@@ -527,9 +525,7 @@ def _calculateD(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> (bool, uint256[
         return (False, [0, 0])
 
     success, mP = self._ecmul(pd2, p[P_ZH])
-    mP[1] = (BASE_SIZE
- - mP[1]) % BASE_SIZE
-
+    mP[1] = (BASE_SIZE - mP[1]) % BASE_SIZE
 
     return self._ecadd(pd, mP)
 
@@ -593,9 +589,7 @@ def _checkPairing(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> bool:
         return False
 
     mIn[0] = aP[0]
-    mIn[1] = (BASE_SIZE
- - aP[1]) % BASE_SIZE
-
+    mIn[1] = (BASE_SIZE - aP[1]) % BASE_SIZE
 
     # [X]_2
     mIn[2] = X2_X2
@@ -626,9 +620,7 @@ def _checkPairing(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> bool:
     if not success:
         return False
 
-    p[P_E + 1] = (BASE_SIZE
- - p[P_E + 1]) % BASE_SIZE
-
+    p[P_E + 1] = (BASE_SIZE - p[P_E + 1]) % BASE_SIZE
 
     success, aP = self._ecadd(aP, [p[P_E], p[P_E + 1]])
     if not success:
