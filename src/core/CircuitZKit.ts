@@ -7,8 +7,6 @@ import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../t
 import { Signals } from "../types/proof-utils";
 import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
 
-import { getBn128Curve } from "../utils";
-
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
  */
@@ -47,13 +45,9 @@ export class CircuitZKit<Type extends ProvingSystemType> {
     const wtnsFile = path.join(tmpDir, `${this.getCircuitName()}.wtns`);
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
-    const curve = await getBn128Curve();
-
     await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
 
     const wtnsJson = await snarkjs.wtns.exportJson(wtnsFile);
-
-    curve.terminate();
 
     return wtnsJson as bigint[];
   }
