@@ -10,7 +10,11 @@ import { terminateCurve } from "../../utils";
 
 export class Groth16Implementer extends AbstractProtocolImplementer<"groth16"> {
   public async generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<Groth16ProofStruct> {
-    return (await snarkjs.groth16.fullProve(inputs, wasmFilePath, zKeyFilePath)) as Groth16ProofStruct;
+    const fullProof = await snarkjs.groth16.fullProve(inputs, wasmFilePath, zKeyFilePath);
+
+    await terminateCurve();
+
+    return fullProof;
   }
 
   public async verifyProof(proof: Groth16ProofStruct, vKeyFilePath: string): Promise<boolean> {

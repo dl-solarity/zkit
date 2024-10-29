@@ -10,7 +10,11 @@ import { terminateCurve } from "../../utils";
 
 export class PlonkImplementer extends AbstractProtocolImplementer<"plonk"> {
   public async generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<PlonkProofStruct> {
-    return (await snarkjs.plonk.fullProve(inputs, wasmFilePath, zKeyFilePath)) as PlonkProofStruct;
+    const fullProof = await snarkjs.plonk.fullProve(inputs, wasmFilePath, zKeyFilePath);
+
+    await terminateCurve();
+
+    return fullProof as PlonkProofStruct;
   }
 
   public async verifyProof(proof: PlonkProofStruct, vKeyFilePath: string): Promise<boolean> {
