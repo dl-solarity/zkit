@@ -6,6 +6,7 @@
 **A zero knowledge kit that helps you interact with Circom circuits.**
 
 - Generate and verify ZK proofs with a single line of code.
+- Leverage `groth16` and `plonk` proving systems.
 - Render optimized Solidity | Vyper verifiers.
 - Build and work with ZK witnesses.
 
@@ -26,33 +27,33 @@ npm install --save-dev @solarity/zkit
 
 `CircuitZKit` is a user-friendly interface for interacting with circom circuits.
 
-To create a CircuitZKit object it is necessary to pass a config:
+To create a `CircuitZKit` object it is necessary to pass a circuit config and a `ProtocolImplementer` instance:
 
 ```typescript
-CircuitZKitConfig = {
+const config = {
   circuitName: string;
   circuitArtifactsPath: string;
   verifierDirPath: string;
-  provingSystem?: VerifierProvingSystem;
 };
+
+const implementer = new Groth16Implementer() | new PlonkImplementer();
+
+const circuit = new CircuitZKit<"groth16" | "plonk">(config, implementer);
 ```
 
-This config contains all the information required to work with the circuit, namely:
+The `config` contains all the information required to work with the circuit, namely:
 
-- `circuitName` - Name of the circuit file without extension
-- `circuitArtifactsPath` - Full path to compilation artifacts for the desired circuit
-- `verifierDirPath` - Full path to the directory where Solidity | Vyper verifier file will be generated
-- `provingSystem` - The proving system that will be used to generate the verifier contract. Right now only `groth16` is supported
+- `circuitName` - Name of the circuit file without extension.
+- `circuitArtifactsPath` - Full path to compilation artifacts for the desired circuit.
+- `verifierDirPath` - Full path to the directory where Solidity | Vyper verifier file will be generated.
 
-#### getTemplate()
+The `implementer` is the instance of a certain proving system. Currently `groth16` and `plonk` systems are supported.
 
-Static `CircuitZKit` function that returns the contents of a template file by the passed type.
+### API reference
 
-```typescript
-const templateContent = CircuitZKit.getTemplate("groth16", "sol");
-```
+---
 
-#### createVerifier()
+- **`async createVerifier("sol" | "vy")`**
 
 Creates a Solidity | Vyper verifier contract on `verifierDirPath` path, which was specified in the config.
 
@@ -60,7 +61,7 @@ Creates a Solidity | Vyper verifier contract on `verifierDirPath` path, which wa
 await multiplier.createVerifier("sol");
 ```
 
-#### calculateWitness()
+- **`async calculateWitness(inputs) -> bigint[]`**
 
 Calculates a witness in the `tmp` directory and returns its json representation.
 
@@ -69,7 +70,7 @@ Calculates a witness in the `tmp` directory and returns its json representation.
 const witness = await multiplier.calculateWitness({ a: 10, b: 20 });
 ```
 
-#### generateProof()
+- **`async generateProof(inputs) -> proof`**
 
 Generates a proof for the given inputs.
 
@@ -78,7 +79,7 @@ Generates a proof for the given inputs.
 const proof = await multiplier.generateProof({ a: 2, b: 3 });
 ```
 
-#### verifyProof()
+- **`async verifyProof(proof) -> bool`**
 
 Verifies the proof.
 
@@ -87,7 +88,7 @@ Verifies the proof.
 const isValidProof = await multiplier.verifyProof(proof);
 ```
 
-#### generateCalldata()
+- **`async generateCalldata(proof) -> calldata`**
 
 Generates calldata by proof for the Solidity | Vyper verifier's `verifyProof()` method.
 
@@ -96,6 +97,22 @@ Generates calldata by proof for the Solidity | Vyper verifier's `verifyProof()` 
 const calldata = await multiplier.generateCalldata(proof);
 ```
 
-## Known limitations
+- **`getCircuitName() -> string`**
 
-- Currently, ZKit supports only the Groth16 proving system.
+Returns the name of the circuit from the config.
+
+- **`getVerifierName() -> string`**
+
+Returns the name of the verifier in the following form:
+
+```typescript
+<Circuit name><Proving system>Verifier
+```
+
+- **`getProvingSystemType() -> "groth16" | "plonk"`**
+
+Returns the current proving system in use.
+
+- **`getVerifierTemplate() -> string`**
+
+Returns the full `ejs` verifier template as a `string`.
