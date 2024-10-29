@@ -49,7 +49,7 @@ The `config` contains all the information required to work with the circuit, nam
 
 The `implementer` is the instance of a certain proving system. Currently `groth16` and `plonk` systems are supported.
 
-### API reference
+#### API reference
 
 ---
 
@@ -58,7 +58,7 @@ The `implementer` is the instance of a certain proving system. Currently `groth1
 Creates a Solidity | Vyper verifier contract on `verifierDirPath` path, which was specified in the config.
 
 ```typescript
-await multiplier.createVerifier("sol");
+await circuit.createVerifier("sol");
 ```
 
 - **`async calculateWitness(inputs) -> bigint[]`**
@@ -67,7 +67,7 @@ Calculates a witness in the `tmp` directory and returns its json representation.
 
 ```typescript
 /// witness = [1n, 200n, 20n, 10n]
-const witness = await multiplier.calculateWitness({ a: 10, b: 20 });
+const witness = await circuit.calculateWitness({ a: 10, b: 20 });
 ```
 
 - **`async generateProof(inputs) -> proof`**
@@ -76,7 +76,7 @@ Generates a proof for the given inputs.
 
 ```typescript
 /// { proof: { pi_a, pi_b, pi_c, protocol, curve }, publicSignals: [6] }
-const proof = await multiplier.generateProof({ a: 2, b: 3 });
+const proof = await circuit.generateProof({ a: 2, b: 3 });
 ```
 
 - **`async verifyProof(proof) -> bool`**
@@ -85,7 +85,7 @@ Verifies the proof.
 
 ```typescript
 /// true
-const isValidProof = await multiplier.verifyProof(proof);
+const isValidProof = await circuit.verifyProof(proof);
 ```
 
 - **`async generateCalldata(proof) -> calldata`**
@@ -94,7 +94,7 @@ Generates calldata by proof for the Solidity | Vyper verifier's `verifyProof()` 
 
 ```typescript
 /// You can use this calldata to call the verifier contract
-const calldata = await multiplier.generateCalldata(proof);
+const calldata = await circuit.generateCalldata(proof);
 ```
 
 - **`getCircuitName() -> string`**
