@@ -6,15 +6,25 @@ import { AbstractProtocolImplementer } from "./AbstractImplementer";
 import { Signals } from "../../types/proof-utils";
 import { Groth16ProofStruct, ProvingSystemType, Groth16Calldata } from "../../types/protocols";
 
+import { terminateCurve } from "../../utils";
+
 export class Groth16Implementer extends AbstractProtocolImplementer<"groth16"> {
   public async generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<Groth16ProofStruct> {
-    return (await snarkjs.groth16.fullProve(inputs, wasmFilePath, zKeyFilePath)) as Groth16ProofStruct;
+    const fullProof = await snarkjs.groth16.fullProve(inputs, wasmFilePath, zKeyFilePath);
+
+    await terminateCurve();
+
+    return fullProof as Groth16ProofStruct;
   }
 
   public async verifyProof(proof: Groth16ProofStruct, vKeyFilePath: string): Promise<boolean> {
     const verifier = JSON.parse(fs.readFileSync(vKeyFilePath).toString());
 
-    return await snarkjs.groth16.verify(verifier, proof.publicSignals, proof.proof);
+    const proofVerification = await snarkjs.groth16.verify(verifier, proof.publicSignals, proof.proof);
+
+    await terminateCurve();
+
+    return proofVerification;
   }
 
   public async generateCalldata(proof: Groth16ProofStruct): Promise<Groth16Calldata> {

@@ -47,7 +47,9 @@ export class CircuitZKit<Type extends ProvingSystemType> {
 
     await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
 
-    return (await snarkjs.wtns.exportJson(wtnsFile)) as bigint[];
+    const wtnsJson = await snarkjs.wtns.exportJson(wtnsFile);
+
+    return wtnsJson as bigint[];
   }
 
   /**

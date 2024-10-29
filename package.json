@@ -1,6 +1,6 @@
 {
   "name": "@solarity/zkit",
-  "version": "0.3.0-rc.1",
+  "version": "0.3.0",
   "license": "MIT",
   "author": "Distributed Lab",
   "readme": "README.md",
@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "ejs": "3.1.10",
-    "snarkjs": "0.7.3"
+    "snarkjs": "0.7.5"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "3.0.5",
