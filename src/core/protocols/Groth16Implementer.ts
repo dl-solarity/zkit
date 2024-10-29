@@ -14,7 +14,7 @@ export class Groth16Implementer extends AbstractProtocolImplementer<"groth16"> {
 
     await terminateCurve();
 
-    return fullProof;
+    return fullProof as Groth16ProofStruct;
   }
 
   public async verifyProof(proof: Groth16ProofStruct, vKeyFilePath: string): Promise<boolean> {
