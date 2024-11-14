@@ -53,6 +53,7 @@ def _g1MulAdd(pR: uint256[2], pP: uint256[2], s: uint256) -> (bool, uint256[2]):
     success, response = raw_call(
         EC_MUL_PRECOMPILED_ADDRESS,
         abi_encode(pP, s),
+        gas=6000,
         max_outsize=64,
         is_static_call=True,
         revert_on_failure=False
@@ -68,6 +69,7 @@ def _g1MulAdd(pR: uint256[2], pP: uint256[2], s: uint256) -> (bool, uint256[2]):
     success, response = raw_call(
         EC_ADD_PRECOMPILED_ADDRESS,
         abi_encode(pR, pS),
+        gas=150,
         max_outsize=64,
         is_static_call=True,
         revert_on_failure=False
@@ -107,6 +109,7 @@ def _checkPairing(pA: uint256[2], pB: uint256[2][2], pC: uint256[2], pubSignals:
             pC,
             DELTA_X1, DELTA_X2, DELTA_Y1, DELTA_Y2
         ),
+        gas=181000,
         max_outsize=32,
         is_static_call=True,
         revert_on_failure=False

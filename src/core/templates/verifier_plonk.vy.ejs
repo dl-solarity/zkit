@@ -149,6 +149,7 @@ def _ecadd(a: uint256[2], b: uint256[2]) -> (bool, uint256[2]):
     success, response = raw_call(
         EC_ADD_PRECOMPILED_ADDRESS,
         abi_encode(a, b),
+        gas=150,
         max_outsize=64,
         is_static_call=True,
         revert_on_failure=False
@@ -171,6 +172,7 @@ def _ecmul(p: uint256[2], s: uint256) -> (bool, uint256[2]):
     success, response = raw_call(
         EC_MUL_PRECOMPILED_ADDRESS,
         abi_encode(p, s),
+        gas=6000,
         max_outsize=64,
         is_static_call=True,
         revert_on_failure=False
@@ -639,6 +641,7 @@ def _checkPairing(p: uint256[P_TOTAL_SIZE], proof: uint256[24]) -> bool:
     success, response = raw_call(
         EC_PAIRING_PRECOMPILED_ADDRESS,
         abi_encode(mIn),
+        gas=113000,
         max_outsize=32,
         is_static_call=True,
         revert_on_failure=False

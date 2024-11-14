@@ -257,6 +257,39 @@ describe("CircuitZKit", () => {
       expect(await verifier.verifyProof(...data)).to.be.true;
     });
 
+    it("should correctly create Vyper verifier and verify 'groth16' proof", async function () {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.vy`);
+
+      await multiplierCircuit.createVerifier("vy");
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const a = 2;
+      const b = 3;
+
+      const proof: any = await multiplierCircuit.generateProof({ a, b });
+
+      expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+
+      let data = await multiplierCircuit.generateCalldata(proof);
+
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierGroth16Verifier");
+      const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(...data)).to.be.true;
+    });
+
     it("should correctly create Vyper verifier and verify 'plonk' proof", async function () {
       const circuitName = "MultiDimensionalArray";
       const verifierDirPath = getVerifiersDirFullPath();

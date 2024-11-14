@@ -415,7 +415,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn,64), mload(pP_))
                 mstore(add(mIn,96), mload(add(pP_, 32)))
 
-                res_ := staticcall(sub(gas(), 2000), 6, mIn, 128, pR_, 64)
+                res_ := staticcall(150, 6, mIn, 128, pR_, 64)
             }
 
             function g1_mulAccC(pR_, x_, y_, s_) -> res_ {
@@ -424,7 +424,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn,32), y_)
                 mstore(add(mIn,64), s_)
 
-                res_ := staticcall(sub(gas(), 2000), 7, mIn, 96, mIn, 64)
+                res_ := staticcall(6000, 7, mIn, 96, mIn, 64)
 
                 if iszero(res_) {
                     leave
@@ -433,7 +433,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn,64), mload(pR_))
                 mstore(add(mIn,96), mload(add(pR_, 32)))
 
-                res_ := staticcall(sub(gas(), 2000), 6, mIn, 128, pR_, 64)
+                res_ := staticcall(150, 6, mIn, 128, pR_, 64)
             }
 
             function g1_mulSetC(pR_, x_, y_, s_) -> res_ {
@@ -442,7 +442,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn,32), y_)
                 mstore(add(mIn,64), s_)
 
-                res_ := staticcall(sub(gas(), 2000), 7, mIn, 96, pR_, 64)
+                res_ := staticcall(6000, 7, mIn, 96, pR_, 64)
             }
 
             function g1_mulSet(pR_, pP_, s_) -> res_ {
@@ -748,7 +748,7 @@ contract <%=verifier_id%> {
                 mstore(add(mIn,320), G2_Y2)
                 mstore(add(mIn,352), G2_Y1)
 
-                if iszero(staticcall(sub(gas(), 2000), 8, mIn, 384, mIn, 0x20)) {
+                if iszero(staticcall(113000, 8, mIn, 384, mIn, 0x20)) {
                     leave
                 }
 
