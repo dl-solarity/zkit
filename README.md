@@ -53,12 +53,13 @@ The `implementer` is the instance of a certain proving system. Currently `groth1
 
 ---
 
-- **`async createVerifier("sol" | "vy")`**
+- **`async createVerifier("sol" | "vy", verifierNameSuffix?: string)`**
 
-Creates a Solidity | Vyper verifier contract on `verifierDirPath` path, which was specified in the config.
+Creates a Solidity | Vyper verifier contract with the optional `verifierNameSuffix` on `verifierDirPath` path, which was specified in the config.
 
 ```typescript
 await circuit.createVerifier("sol");
+await circuit.createVerifier("sol", "_suffix_");
 ```
 
 - **`async calculateWitness(inputs) -> bigint[]`**
@@ -101,12 +102,12 @@ const calldata = await circuit.generateCalldata(proof);
 
 Returns the name of the circuit from the config.
 
-- **`getVerifierName() -> string`**
+- **`getVerifierName(verifierNameSuffix?: string) -> string`**
 
 Returns the name of the verifier in the following form:
 
 ```typescript
-<Circuit name><Proving system>Verifier
+<Circuit name><Suffix><Proving system>Verifier
 ```
 
 - **`getProvingSystemType() -> "groth16" | "plonk"`**

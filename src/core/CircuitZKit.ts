@@ -17,16 +17,20 @@ export class CircuitZKit<Type extends ProvingSystemType> {
   ) {}
 
   /**
-   * Creates a verifier contract for the specified contract language.
+   * Creates a verifier contract for the specified contract language with optional name suffix.
+   * For more details regarding the structure of the contract verifier name, see {@link getVerifierName} description.
+   *
+   * @param {VerifierLanguageType} languageExtension - The verifier contract language extension.
+   * @param {string} verifierNameSuffix - The optional verifier name suffix.
    */
-  public async createVerifier(languageExtension: VerifierLanguageType): Promise<void> {
+  public async createVerifier(languageExtension: VerifierLanguageType, verifierNameSuffix?: string): Promise<void> {
     const vKeyFilePath: string = this.mustGetArtifactsFilePath("vkey");
     const verifierFilePath = path.join(
       this._config.verifierDirPath,
-      `${this._implementer.getVerifierName(this._config.circuitName)}.${languageExtension}`,
+      `${this.getVerifierName(verifierNameSuffix)}.${languageExtension}`,
     );
 
-    this._implementer.createVerifier(this._config.circuitName, vKeyFilePath, verifierFilePath, languageExtension);
+    this._implementer.createVerifier(vKeyFilePath, verifierFilePath, languageExtension);
   }
 
   /**
@@ -104,12 +108,15 @@ export class CircuitZKit<Type extends ProvingSystemType> {
   }
 
   /**
-   * Returns the verifier name. The verifier name is the name of the circuit file without the extension, suffixed with "Verifier".
+   * Returns the verifier name. The verifier name has the next structure:
+   * `<template name><suffix><proving system>Verifier.<extension>`.
+   *
+   * @param {string} verifierNameSuffix - The optional verifier name suffix.
    *
    * @returns {string} The verifier name.
    */
-  public getVerifierName(): string {
-    return this._implementer.getVerifierName(this._config.circuitName);
+  public getVerifierName(verifierNameSuffix?: string): string {
+    return this._implementer.getVerifierName(this._config.circuitName, verifierNameSuffix);
   }
 
   /**
