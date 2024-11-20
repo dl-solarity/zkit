@@ -9,7 +9,6 @@ export * from "./plonk";
 
 export interface IProtocolImplementer<T extends ProvingSystemType> {
   createVerifier(
-    circuitName: string,
     vKeyFilePath: string,
     verifierFilePath: string,
     languageExtension: VerifierLanguageType,
@@ -25,7 +24,7 @@ export interface IProtocolImplementer<T extends ProvingSystemType> {
 
   getTemplate(fileExtension: VerifierLanguageType): string;
 
-  getVerifierName(circuitName: string): string;
+  getVerifierName(circuitName: string, verifierNameSuffix?: string): string;
 
   getZKeyFileName(circuitName: string): string;
 

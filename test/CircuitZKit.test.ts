@@ -189,6 +189,43 @@ describe("CircuitZKit", () => {
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
 
+    it("should correctly create verifier file with the name suffix", async () => {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+      const protocolType: ProvingSystemType = "plonk";
+
+      const multiplierCircuit = getCircuitZKit<"plonk">(circuitName, "plonk", {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const nameSuffix: string = "_2_3_";
+
+      expect(multiplierCircuit.getVerifierName(nameSuffix)).to.be.eq(`${circuitName}${nameSuffix}PlonkVerifier`);
+
+      const expectedVerifierFilePath = path.join(
+        verifierDirPath,
+        `${multiplierCircuit.getVerifierName(nameSuffix)}.sol`,
+      );
+
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.false;
+
+      await multiplierCircuit.createVerifier("sol", nameSuffix);
+
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      const expectedVKeyFilePath = path.join(artifactsDirFullPath, `${circuitName}.${protocolType}.vkey.json`);
+      expect(multiplierCircuit.getArtifactsFilePath("vkey")).to.be.eq(expectedVKeyFilePath);
+
+      const template = multiplierCircuit.getVerifierTemplate("sol");
+      const templateParams = JSON.parse(fs.readFileSync(expectedVKeyFilePath, "utf-8"));
+      templateParams["verifier_id"] = multiplierCircuit.getVerifierName(nameSuffix);
+
+      expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
+    });
+
     it("should correctly create verifier and verify 'groth16' proof", async function () {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();

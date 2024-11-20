@@ -13,7 +13,6 @@ import { VerifierLanguageType } from "../../types/circuit-zkit";
 
 export abstract class AbstractProtocolImplementer<T extends ProvingSystemType> implements IProtocolImplementer<T> {
   public async createVerifier(
-    circuitName: string,
     vKeyFilePath: string,
     verifierFilePath: string,
     languageExtension: VerifierLanguageType,
@@ -25,7 +24,7 @@ export abstract class AbstractProtocolImplementer<T extends ProvingSystemType> i
     }
 
     const templateParams = JSON.parse(fs.readFileSync(vKeyFilePath, "utf-8"));
-    templateParams["verifier_id"] = this.getVerifierName(circuitName);
+    templateParams["verifier_id"] = path.parse(verifierFilePath).name;
 
     const verifierCode = ejs.render(verifierTemplate, templateParams);
 
@@ -51,10 +50,11 @@ export abstract class AbstractProtocolImplementer<T extends ProvingSystemType> i
     );
   }
 
-  public getVerifierName(circuitName: string): string {
+  public getVerifierName(circuitName: string, verifierNameSuffix?: string): string {
     const protocolType: ProvingSystemType = this.getProvingSystemType();
+    const nameSuffix: string = verifierNameSuffix ?? "";
 
-    return `${circuitName}${protocolType.charAt(0).toUpperCase() + protocolType.slice(1)}Verifier`;
+    return `${circuitName}${nameSuffix}${protocolType.charAt(0).toUpperCase() + protocolType.slice(1)}Verifier`;
   }
 
   public getZKeyFileName(circuitName: string): string {
