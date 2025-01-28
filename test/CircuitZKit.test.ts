@@ -4,6 +4,8 @@ import path from "path";
 import * as os from "os";
 
 import { expect } from "chai";
+import { createHash } from "crypto";
+
 import { useFixtureProject } from "./helpers";
 
 import {
@@ -393,6 +395,30 @@ describe("CircuitZKit", () => {
       expect(fs.readFileSync(expectedVerifierFilePath, "utf-8")).to.be.eq(ejs.render(template, templateParams));
     });
 
+    it("should correctly create verifier with long suffix name", async () => {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+      const protocolType: ProvingSystemType = "groth16";
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, protocolType, {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const longSuffixName = `_L${"o".repeat(220)}ngSuffixName_`;
+      const expectedSuffix = `_0x${createHash("sha1").update(longSuffixName).digest("hex").slice(0, 8)}_`;
+
+      const expectedVerifierFilePath = path.join(
+        verifierDirPath,
+        `${multiplierCircuit.getVerifierName(expectedSuffix)}.sol`,
+      );
+
+      await multiplierCircuit.createVerifier("sol", longSuffixName);
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+    });
+
     it("should get exception if vKey file does not exist", async () => {
       const circuitName = "Multiplier";
 
@@ -406,6 +432,24 @@ describe("CircuitZKit", () => {
 
       await expect(multiplierCircuit.createVerifier("sol")).to.be.rejectedWith(
         `Expected the file "${invalidVKeyFilePath}" to exist`,
+      );
+    });
+
+    it("should get exception if the new verifier file name length exceeds the maximum file name length", async () => {
+      const circuitName = `L${"o".repeat(223)}ngNameCircuit`;
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const longNameCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedCircuitVerifierfileName = `${longNameCircuit.getVerifierName()}.sol`;
+
+      await expect(longNameCircuit.createVerifier("sol")).to.be.rejectedWith(
+        `Verifier file name "${expectedCircuitVerifierfileName}" exceeds the maximum file name length`,
       );
     });
   });
