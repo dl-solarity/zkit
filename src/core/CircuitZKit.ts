@@ -2,10 +2,13 @@ import fs from "fs";
 import path from "path";
 import * as os from "os";
 import * as snarkjs from "snarkjs";
+import { createHash } from "crypto";
 
 import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
 import { Signals } from "../types/proof-utils";
 import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
+
+import { MAX_FILE_NAME_LENGTH } from "../constants";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
@@ -20,15 +23,32 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    * Creates a verifier contract for the specified contract language with optional name suffix.
    * For more details regarding the structure of the contract verifier name, see {@link getVerifierName} description.
    *
+   * In case the length of the verifier filename exceeds the {@link MAX_FILE_NAME_LENGTH},
+   * the `verifierNameSuffix` will be replaced by the first four bytes of its `sha1` hash.
+   *
+   * If no suffix was passed, but the verifier's filename still exceeds {@link MAX_FILE_NAME_LENGTH}, an error will be thrown.
+   *
    * @param {VerifierLanguageType} languageExtension - The verifier contract language extension.
    * @param {string} verifierNameSuffix - The optional verifier name suffix.
    */
   public async createVerifier(languageExtension: VerifierLanguageType, verifierNameSuffix?: string): Promise<void> {
     const vKeyFilePath: string = this.mustGetArtifactsFilePath("vkey");
-    const verifierFilePath = path.join(
-      this._config.verifierDirPath,
-      `${this.getVerifierName(verifierNameSuffix)}.${languageExtension}`,
-    );
+
+    let verifierFileName: string = `${this.getVerifierName(verifierNameSuffix)}.${languageExtension}`;
+
+    if (verifierFileName.length >= MAX_FILE_NAME_LENGTH) {
+      const modifiedSuffix: string = verifierNameSuffix
+        ? `_0x${createHash("sha1").update(verifierNameSuffix).digest("hex").slice(0, 8)}_`
+        : "";
+
+      verifierFileName = `${this.getVerifierName(modifiedSuffix)}.${languageExtension}`;
+
+      if (verifierFileName.length >= MAX_FILE_NAME_LENGTH) {
+        throw new Error(`Verifier file name "${verifierFileName}" exceeds the maximum file name length`);
+      }
+    }
+
+    const verifierFilePath = path.join(this._config.verifierDirPath, verifierFileName);
 
     this._implementer.createVerifier(vKeyFilePath, verifierFilePath, languageExtension);
   }
