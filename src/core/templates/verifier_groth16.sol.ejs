@@ -5,6 +5,9 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 contract <%=verifier_id%> {
+    // @dev scalar field size
+    uint256 public constant SCALAR_FIELD_SIZE =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617;
     /// @dev base field size
     uint256 public constant BASE_FIELD_SIZE =
         21888242871839275222246405745257275088696311157297823662689037894645226208583;
@@ -57,7 +60,7 @@ contract <%=verifier_id%> {
     ) public view returns (bool verified_) {
         assembly {
             function checkField(signal_) -> res_ {
-                res_ := lt(signal_, BASE_FIELD_SIZE)
+                res_ := lt(signal_, SCALAR_FIELD_SIZE)
             }
 
             function g1MulAdd(pR_, x_, y_, s_) -> res_ {
