@@ -5,6 +5,7 @@ import * as os from "os";
 
 import { expect } from "chai";
 import { createHash } from "crypto";
+import { AddressLike, BigNumberish } from "ethers";
 
 import { useFixtureProject } from "./helpers";
 
@@ -21,7 +22,26 @@ import {
   PlonkCalldataStruct,
 } from "../src";
 
-import { TestGroth16Verifier } from "./fixture-projects/simple-circuits/generated-types/ethers";
+export type ProofPointsStruct = {
+  a: [BigNumberish, BigNumberish];
+  b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]];
+  c: [BigNumberish, BigNumberish];
+};
+
+export interface ShortTestGroth16VerifierType {
+  verifyProof(
+    verifier_: AddressLike,
+    pubSignals_: BigNumberish[],
+    a_: [BigNumberish, BigNumberish],
+    b_: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+    c_: [BigNumberish, BigNumberish],
+  ): Promise<boolean>;
+  verifyProofStruct(
+    verifier_: AddressLike,
+    pubSignals_: BigNumberish[],
+    proofPoints_: ProofPointsStruct,
+  ): Promise<boolean>;
+}
 
 describe("CircuitZKit", () => {
   function getArtifactsFullPath(circuitDirSourceName: string): string {
@@ -536,7 +556,7 @@ describe("CircuitZKit", () => {
       const TestGroth16VerifierFactory = await this.hre.ethers.getContractFactory("TestGroth16Verifier");
 
       const verifier = await MultiplierVerifierFactory.deploy();
-      const testGroth16Verifier: TestGroth16Verifier = await TestGroth16VerifierFactory.deploy();
+      const testGroth16Verifier: ShortTestGroth16VerifierType = await TestGroth16VerifierFactory.deploy();
 
       const b = 10,
         a = 20;
