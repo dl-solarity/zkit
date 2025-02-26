@@ -1,7 +1,11 @@
-import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+
+import "@typechain/hardhat";
 
 import "@nomicfoundation/hardhat-ethers";
 import "@nomiclabs/hardhat-vyper";
+
+import { HardhatUserConfig } from "hardhat/config";
 
 const config: HardhatUserConfig = {
   networks: {
@@ -18,6 +22,12 @@ const config: HardhatUserConfig = {
       },
       evmVersion: "paris",
     },
+  },
+  typechain: {
+    outDir: "generated-types/ethers",
+    target: "ethers-v6",
+    alwaysGenerateOverloads: true,
+    discriminateTypes: true,
   },
   vyper: {
     version: "0.4.0",

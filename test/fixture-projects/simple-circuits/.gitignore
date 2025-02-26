@@ -2,3 +2,7 @@
 /artifacts
 
 contracts/verifiers
+
+# TypeChain files
+generated-types
+typechain-types

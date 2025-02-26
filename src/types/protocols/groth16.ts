@@ -13,9 +13,13 @@ export interface Groth16ProofStruct {
   publicSignals: PublicSignals;
 }
 
-export type Groth16Calldata = [
-  [NumericString, NumericString],
-  [[NumericString, NumericString], [NumericString, NumericString]],
-  [NumericString, NumericString],
-  PublicSignals,
-];
+export interface Groth16CalldataStruct {
+  proofPoints: Groth16ProofPoints;
+  publicSignals: PublicSignals;
+}
+
+export interface Groth16ProofPoints {
+  a: [NumericString, NumericString];
+  b: [[NumericString, NumericString], [NumericString, NumericString]];
+  c: [NumericString, NumericString];
+}

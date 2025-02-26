@@ -1,5 +1,5 @@
-import { Groth16ProofStruct, Groth16Calldata } from "./groth16";
-import { PlonkProofStruct, PlonkCalldata } from "./plonk";
+import { Groth16ProofStruct, Groth16CalldataStruct } from "./groth16";
+import { PlonkProofStruct, PlonkCalldataStruct } from "./plonk";
 
 import { Signals } from "../proof-utils";
 import { VerifierLanguageType } from "../circuit-zkit";
@@ -34,15 +34,15 @@ export interface IProtocolImplementer<T extends ProvingSystemType> {
 export interface ProvingSystemStructMap {
   groth16: {
     proofStruct: Groth16ProofStruct;
-    calldata: Groth16Calldata;
+    calldataStruct: Groth16CalldataStruct;
   };
   plonk: {
     proofStruct: PlonkProofStruct;
-    calldata: PlonkCalldata;
+    calldataStruct: PlonkCalldataStruct;
   };
 }
 
 export type ProvingSystemType = keyof ProvingSystemStructMap;
 
 export type ProofStructByProtocol<T extends ProvingSystemType> = ProvingSystemStructMap[T]["proofStruct"];
-export type CalldataByProtocol<T extends ProvingSystemType> = ProvingSystemStructMap[T]["calldata"];
+export type CalldataByProtocol<T extends ProvingSystemType> = ProvingSystemStructMap[T]["calldataStruct"];
