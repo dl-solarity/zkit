@@ -91,10 +91,11 @@ const isValidProof = await circuit.verifyProof(proof);
 
 - **`async generateCalldata(proof) -> calldata`**
 
-Generates calldata by proof for the Solidity | Vyper verifier's `verifyProof()` method.
+Generates `Calldata` struct by proof for the Solidity | Vyper verifier's `verifyProof()` method.
 
 ```typescript
-/// You can use this calldata to call the verifier contract
+/// You can use this `calldata` sturct in the circuit verifier contract.
+/// calldata: { proofPoints: { a, b, c }, publicSignals: [6] }
 const calldata = await circuit.generateCalldata(proof);
 ```
 
