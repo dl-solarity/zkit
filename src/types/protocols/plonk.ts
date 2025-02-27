@@ -25,4 +25,9 @@ export interface PlonkProofStruct {
   publicSignals: PublicSignals;
 }
 
+export interface PlonkCalldataStruct {
+  proofPoints: NumericString[];
+  publicSignals: PublicSignals;
+}
+
 export type PlonkCalldata = [NumericString[], PublicSignals];

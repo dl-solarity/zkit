@@ -4,7 +4,7 @@ import * as snarkjs from "snarkjs";
 import { AbstractProtocolImplementer } from "./AbstractImplementer";
 
 import { Signals } from "../../types/proof-utils";
-import { Groth16ProofStruct, ProvingSystemType, Groth16Calldata } from "../../types/protocols";
+import { Groth16ProofStruct, Groth16CalldataStruct, ProvingSystemType } from "../../types/protocols";
 
 import { terminateCurve } from "../../utils";
 
@@ -27,10 +27,19 @@ export class Groth16Implementer extends AbstractProtocolImplementer<"groth16"> {
     return proofVerification;
   }
 
-  public async generateCalldata(proof: Groth16ProofStruct): Promise<Groth16Calldata> {
-    const calldata = await snarkjs.groth16.exportSolidityCallData(proof.proof, proof.publicSignals);
+  public async generateCalldata(proof: Groth16ProofStruct): Promise<Groth16CalldataStruct> {
+    const calldataRawArray = JSON.parse(
+      `[${await snarkjs.groth16.exportSolidityCallData(proof.proof, proof.publicSignals)}]`,
+    );
 
-    return JSON.parse(`[${calldata}]`) as Groth16Calldata;
+    return {
+      proofPoints: {
+        a: calldataRawArray[0],
+        b: calldataRawArray[1],
+        c: calldataRawArray[2],
+      },
+      publicSignals: calldataRawArray[3],
+    };
   }
 
   public getProvingSystemType(): ProvingSystemType {

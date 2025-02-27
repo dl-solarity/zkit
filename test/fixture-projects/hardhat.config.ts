@@ -1,7 +1,7 @@
-import { HardhatUserConfig } from "hardhat/config";
-
 import "@nomicfoundation/hardhat-ethers";
 import "@nomiclabs/hardhat-vyper";
+
+import { HardhatUserConfig } from "hardhat/config";
 
 const config: HardhatUserConfig = {
   networks: {

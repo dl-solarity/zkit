@@ -4,7 +4,7 @@ import * as snarkjs from "snarkjs";
 import { AbstractProtocolImplementer } from "./AbstractImplementer";
 
 import { Signals } from "../../types/proof-utils";
-import { PlonkCalldata, PlonkProofStruct, ProvingSystemType } from "../../types/protocols";
+import { PlonkProofStruct, PlonkCalldataStruct, ProvingSystemType } from "../../types/protocols";
 
 import { terminateCurve } from "../../utils";
 
@@ -27,13 +27,18 @@ export class PlonkImplementer extends AbstractProtocolImplementer<"plonk"> {
     return proofVerification;
   }
 
-  public async generateCalldata(proof: PlonkProofStruct): Promise<PlonkCalldata> {
+  public async generateCalldata(proof: PlonkProofStruct): Promise<PlonkCalldataStruct> {
     const calldata = await snarkjs.plonk.exportSolidityCallData(proof.proof, proof.publicSignals);
     const proofArrEndIndex: number = calldata.indexOf("]") + 1;
 
-    return JSON.parse(
+    const calldataRawArray = JSON.parse(
       `[${calldata.slice(0, proofArrEndIndex)},${calldata.slice(proofArrEndIndex, calldata.length)}]`,
-    ) as PlonkCalldata;
+    );
+
+    return {
+      proofPoints: calldataRawArray[0],
+      publicSignals: calldataRawArray[1],
+    };
   }
 
   public getProvingSystemType(): ProvingSystemType {
