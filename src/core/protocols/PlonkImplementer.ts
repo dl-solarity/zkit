@@ -36,7 +36,9 @@ export class PlonkImplementer extends AbstractProtocolImplementer<"plonk"> {
     );
 
     return {
-      proofPoints: calldataRawArray[0],
+      proofPoints: {
+        proofData: calldataRawArray[0],
+      },
       publicSignals: calldataRawArray[1],
     };
   }

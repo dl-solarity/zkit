@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import {Groth16VerifierHelper} from "@solarity/solidity-lib/libs/zkp/Groth16VerifierHelper.sol";
+import {PlonkVerifierHelper} from "@solarity/solidity-lib/libs/zkp/PlonkVerifierHelper.sol";
 
-contract TestGroth16Verifier {
-    using Groth16VerifierHelper for address;
+contract TestPlonkVerifier {
+    using PlonkVerifierHelper for address;
 
-    function verifyProofGroth16ProofStruct(
+    function verifyProofPlonkProofStruct(
         address verifier_,
-        Groth16VerifierHelper.Groth16Proof memory groth16Proof_
+        PlonkVerifierHelper.PlonkProof memory groth16Proof_
     ) external view returns (bool) {
         return verifier_.verifyProof(groth16Proof_);
     }
 
     function verifyProofPointsStruct(
         address verifier_,
-        Groth16VerifierHelper.ProofPoints memory proofPoints_,
+        PlonkVerifierHelper.ProofPoints memory proofPoints_,
         uint256[] memory pubSignals_
     ) external view returns (bool) {
         return verifier_.verifyProof(proofPoints_, pubSignals_);
@@ -23,11 +23,9 @@ contract TestGroth16Verifier {
 
     function verifyProof(
         address verifier_,
-        uint256[2] memory a_,
-        uint256[2][2] memory b_,
-        uint256[2] memory c_,
+        uint256[24] memory proofData_,
         uint256[] memory pubSignals_
     ) external view returns (bool) {
-        return verifier_.verifyProof(a_, b_, c_, pubSignals_);
+        return verifier_.verifyProof(proofData_, pubSignals_);
     }
 }

@@ -26,8 +26,10 @@ export interface PlonkProofStruct {
 }
 
 export interface PlonkCalldataStruct {
-  proofPoints: NumericString[];
+  proofPoints: PlonkProofPoints;
   publicSignals: PublicSignals;
 }
 
-export type PlonkCalldata = [NumericString[], PublicSignals];
+export interface PlonkProofPoints {
+  proofData: NumericString[];
+}
