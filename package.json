@@ -1,6 +1,6 @@
 {
   "name": "@solarity/zkit",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "license": "MIT",
   "author": "Distributed Lab",
   "readme": "README.md",
@@ -44,7 +44,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "3.0.5",
     "@nomiclabs/hardhat-vyper": "^3.0.7",
-    "@solarity/solidity-lib": "2.7.10",
+    "@solarity/solidity-lib": "3.0.0-rc.3",
     "@types/chai": "^4.3.12",
     "@types/chai-as-promised": "^7.1.8",
     "@types/ejs": "^3.1.5",

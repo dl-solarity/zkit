@@ -22,7 +22,12 @@ import {
   PlonkCalldataStruct,
 } from "../src";
 
-export type ProofPointsStruct = {
+export type Groth16ProofVerifierStruct = {
+  proofPoints: Groth16ProofPointsStruct;
+  publicSignals: BigNumberish[];
+};
+
+export type Groth16ProofPointsStruct = {
   a: [BigNumberish, BigNumberish];
   b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]];
   c: [BigNumberish, BigNumberish];
@@ -31,16 +36,36 @@ export type ProofPointsStruct = {
 export interface ShortTestGroth16VerifierType {
   verifyProof(
     verifier_: AddressLike,
-    pubSignals_: BigNumberish[],
     a_: [BigNumberish, BigNumberish],
     b_: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
     c_: [BigNumberish, BigNumberish],
-  ): Promise<boolean>;
-  verifyProofStruct(
-    verifier_: AddressLike,
     pubSignals_: BigNumberish[],
-    proofPoints_: ProofPointsStruct,
   ): Promise<boolean>;
+  verifyProofPointsStruct(
+    verifier_: AddressLike,
+    proofPoints_: Groth16ProofPointsStruct,
+    pubSignals_: BigNumberish[],
+  ): Promise<boolean>;
+  verifyProofGroth16ProofStruct(verifier_: AddressLike, groth16Proof_: Groth16ProofVerifierStruct): Promise<boolean>;
+}
+
+export type PlonkProofVerifierStruct = {
+  proofPoints: PlonkProofPointsStruct;
+  publicSignals: BigNumberish[];
+};
+
+export type PlonkProofPointsStruct = {
+  proofData: BigNumberish[];
+};
+
+export interface ShortTestPlonkVerifierType {
+  verifyProof(verifier_: AddressLike, proofData_: BigNumberish[], pubSignals_: BigNumberish[]): Promise<boolean>;
+  verifyProofPointsStruct(
+    verifier_: AddressLike,
+    proofPoints_: PlonkProofPointsStruct,
+    pubSignals_: BigNumberish[],
+  ): Promise<boolean>;
+  verifyProofPlonkProofStruct(verifier_: AddressLike, plonkProof_: PlonkProofVerifierStruct): Promise<boolean>;
 }
 
 describe("CircuitZKit", () => {
@@ -316,7 +341,7 @@ describe("CircuitZKit", () => {
 
       const verifier = await MultiplierVerifierFactory.deploy();
 
-      expect(await verifier.verifyProof(data.proofPoints, data.publicSignals)).to.be.true;
+      expect(await verifier.verifyProof(data.proofPoints.proofData, data.publicSignals)).to.be.true;
     });
 
     it("should correctly create Vyper verifier and verify 'groth16' proof", async function () {
@@ -386,7 +411,7 @@ describe("CircuitZKit", () => {
       const MdArrayVerifierFactory = await this.hre.ethers.getContractFactory("MultiDimensionalArrayPlonkVerifier");
       const verifier = await MdArrayVerifierFactory.deploy();
 
-      expect(await verifier.verifyProof(data.proofPoints, data.publicSignals)).to.be.true;
+      expect(await verifier.verifyProof(data.proofPoints.proofData, data.publicSignals)).to.be.true;
     });
 
     it("should correctly create verifier several times", async () => {
@@ -567,19 +592,20 @@ describe("CircuitZKit", () => {
       expect(
         await testGroth16Verifier.verifyProof(
           verifier,
-          generatedCalldata.publicSignals,
           generatedCalldata.proofPoints.a,
           generatedCalldata.proofPoints.b,
           generatedCalldata.proofPoints.c,
+          generatedCalldata.publicSignals,
         ),
       ).to.be.true;
       expect(
-        await testGroth16Verifier.verifyProofStruct(
+        await testGroth16Verifier.verifyProofPointsStruct(
           verifier,
-          generatedCalldata.publicSignals,
           generatedCalldata.proofPoints,
+          generatedCalldata.publicSignals,
         ),
       ).to.be.true;
+      expect(await testGroth16Verifier.verifyProofGroth16ProofStruct(verifier, generatedCalldata)).to.be.true;
     });
 
     it("should correctly generate 'plonk' calldata and verify proof on the verifier contract", async function () {
@@ -592,7 +618,10 @@ describe("CircuitZKit", () => {
       await this.hre.run("compile", { quiet: true });
 
       const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierPlonkVerifier");
+      const TestPlonkVerifierFactory = await this.hre.ethers.getContractFactory("TestPlonkVerifier");
+
       const verifier = await MultiplierVerifierFactory.deploy();
+      const testPlonkVerifier: ShortTestPlonkVerifierType = await TestPlonkVerifierFactory.deploy();
 
       const b = 10,
         a = 20;
@@ -600,7 +629,23 @@ describe("CircuitZKit", () => {
       const proof: PlonkProofStruct = await multiplierCircuit.generateProof({ a, b });
       const generatedCalldata: PlonkCalldataStruct = await multiplierCircuit.generateCalldata(proof);
 
-      expect(await verifier.verifyProof(generatedCalldata.proofPoints, generatedCalldata.publicSignals));
+      expect(await verifier.verifyProof(generatedCalldata.proofPoints.proofData, generatedCalldata.publicSignals));
+
+      expect(
+        await testPlonkVerifier.verifyProof(
+          verifier,
+          generatedCalldata.proofPoints.proofData,
+          generatedCalldata.publicSignals,
+        ),
+      ).to.be.true;
+      expect(
+        await testPlonkVerifier.verifyProofPointsStruct(
+          verifier,
+          generatedCalldata.proofPoints,
+          generatedCalldata.publicSignals,
+        ),
+      ).to.be.true;
+      expect(await testPlonkVerifier.verifyProofPlonkProofStruct(verifier, generatedCalldata)).to.be.true;
     });
   });
 
