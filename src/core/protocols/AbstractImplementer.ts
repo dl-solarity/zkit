@@ -2,7 +2,6 @@ import fs from "fs";
 import ejs from "ejs";
 import path from "path";
 
-import { Signals } from "../../types/proof-utils";
 import {
   IProtocolImplementer,
   ProvingSystemType,
@@ -31,11 +30,7 @@ export abstract class AbstractProtocolImplementer<T extends ProvingSystemType> i
     fs.writeFileSync(verifierFilePath, verifierCode, "utf-8");
   }
 
-  public abstract generateProof(
-    inputs: Signals,
-    zKeyFilePath: string,
-    wasmFilePath: string,
-  ): Promise<ProofStructByProtocol<T>>;
+  public abstract generateProof(zKeyFilePath: string, witnessFilePath: string): Promise<ProofStructByProtocol<T>>;
 
   public abstract verifyProof(proof: ProofStructByProtocol<T>, vKeyFilePath: string): Promise<boolean>;
 

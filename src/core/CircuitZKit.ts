@@ -1,14 +1,19 @@
 import fs from "fs";
 import path from "path";
-import * as os from "os";
 import * as snarkjs from "snarkjs";
 import { createHash } from "crypto";
+
+// @ts-ignore
+import * as binFileUtils from "@iden3/binfileutils";
+// @ts-ignore
+import * as wtnsUtils from "snarkjs/src/wtns_utils.js";
 
 import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
 import { Signals } from "../types/proof-utils";
 import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
 
 import { MAX_FILE_NAME_LENGTH } from "../constants";
+import { getTmpDir, getWitnessPrime, writeWitnessFile } from "../utils";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
@@ -60,13 +65,7 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    * @returns {Promise<bigint[]>} The generated witness.
    */
   public async calculateWitness(inputs: Signals): Promise<bigint[]> {
-    const tmpDir = path.join(os.tmpdir(), ".zkit");
-
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-
-    const wtnsFile = path.join(tmpDir, `${this.getCircuitName()}.wtns`);
+    const wtnsFile = path.join(getTmpDir(), `${this.getCircuitName()}.wtns`);
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
     await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
@@ -77,19 +76,78 @@ export class CircuitZKit<Type extends ProvingSystemType> {
   }
 
   /**
-   * Generates a proof for the given inputs.
+   * Modifies specific signals in the existing witness and saves the result to a new `_modified.wtns` file.
    *
-   * @dev The `inputs` should be in the same order as the circuit expects them.
+   * Enables creation of an invalid witness for testing negative scenarios.
+   * Once called, the circuit will use the modified witness file instead of the original one during proof generation.
    *
-   * @param {Signals} inputs - The inputs for the circuit.
-   * @returns {Promise<ProofStructByProtocol<Type>>} The generated proof.
-   * @todo Add support for other proving systems.
+   * Signal names must be provided in their full form as represented in the `.sym` file, e.g.,
+   * `main.signal`, `main.component.signal`, or `main.component.signal[n][m]`.
+   *
+   * Throws an error if any of the provided signal names is not in the witness file.
+   *
+   * @param {Record<string, bigint>} overrides - A map of signal names to new witness values.
+   * @returns {Promise<bigint[]>} The modified witness.
    */
-  public async generateProof(inputs: Signals): Promise<ProofStructByProtocol<Type>> {
-    const zKeyFile = this.mustGetArtifactsFilePath("zkey");
-    const wasmFile = this.mustGetArtifactsFilePath("wasm");
+  public async modifyWitness(overrides: Record<string, bigint>): Promise<bigint[]> {
+    const tmpDir = getTmpDir();
+    const circuitName = this.getCircuitName();
 
-    return await this._implementer.generateProof(inputs, zKeyFile, wasmFile);
+    const wtnsFile = path.join(tmpDir, `${circuitName}.wtns`);
+    const modifiedWtnsFile = path.join(tmpDir, `${circuitName}_modified.wtns`);
+
+    const witness = (await snarkjs.wtns.exportJson(wtnsFile)) as bigint[];
+
+    const signalIndexes = await this.loadSignalToIndexMap();
+
+    for (const [signal, value] of Object.entries(overrides)) {
+      const index = signalIndexes[signal];
+
+      if (index === undefined) {
+        throw new Error(`Signal ${signal} not found in .sym file`);
+      }
+
+      witness[index] = value;
+    }
+
+    const prime = await getWitnessPrime(wtnsFile);
+    await writeWitnessFile(modifiedWtnsFile, witness, prime);
+
+    return witness;
+  }
+
+  /**
+   * Removes the modified witness file, if it exists.
+   *
+   * After calling this method, the circuit will fall back to using the original witness file during proof generation.
+   *
+   * It does nothing if the modified witness file does not exist.
+   */
+  public async resetWitness() {
+    const modifiedWtnsFile = path.join(getTmpDir(), `${this.getCircuitName()}_modified.wtns`);
+
+    if (fs.existsSync(modifiedWtnsFile)) {
+      fs.rmSync(modifiedWtnsFile);
+    }
+  }
+
+  /**
+   * Generates a proof for the existing witness file or given inputs.
+   *
+   * The proof is generated using the modified witness if it exists, otherwise the original witness.
+   * If no witness is available, it will be calculated from the provided inputs.
+   *
+   * @dev The `inputs` are required only if no witness file exists.
+   *      They should be in the same order as the circuit expects them.
+   *
+   * @param {Signals} inputs - Optional inputs to calculate the witness if missing.
+   * @returns {Promise<ProofStructByProtocol<Type>>} The generated proof.
+   */
+  public async generateProof(inputs?: Signals): Promise<ProofStructByProtocol<Type>> {
+    const zKeyFile = this.mustGetArtifactsFilePath("zkey");
+    const witnessFile = await this.getWitnessFilePath(inputs);
+
+    return await this._implementer.generateProof(zKeyFile, witnessFile);
   }
 
   /**
@@ -112,7 +170,6 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    *
    * @param {ProofStructByProtocol<Type>} proof - The proof to generate calldata for.
    * @returns {Promise<CalldataByProtocol<Type>>} - The generated calldata.
-   * @todo Add other types of calldata.
    */
   public async generateCalldata(proof: ProofStructByProtocol<Type>): Promise<CalldataByProtocol<Type>> {
     return await this._implementer.generateCalldata(proof);
@@ -210,5 +267,70 @@ export class CircuitZKit<Type extends ProvingSystemType> {
     }
 
     return path.join(fileDir, fileName);
+  }
+
+  /**
+   * Retrieves the path to the witness file.
+   *
+   * Returns the path to the modified witness file if available;
+   * otherwise, returns the original or calculates it using provided `inputs`.
+   *
+   * Throws an error if the witness file is missing and `inputs` are not provided.
+   *
+   * @param {Signals} [inputs] - Optional inputs to calculate the witness if missing.
+   * @returns {Promise<string>} The path to the witness file.
+   */
+  public async getWitnessFilePath(inputs?: Signals): Promise<string> {
+    const tmpDir = getTmpDir();
+    const circuitName = this.getCircuitName();
+
+    const modifiedWitness = path.join(tmpDir, `${circuitName}_modified.wtns`);
+    const originalWitness = path.join(tmpDir, `${circuitName}.wtns`);
+
+    if (fs.existsSync(modifiedWitness)) {
+      return modifiedWitness;
+    }
+
+    if (fs.existsSync(originalWitness)) {
+      return originalWitness;
+    }
+
+    if (!inputs) {
+      throw new Error(`Witness file not found. Inputs are required to calculate witness.`);
+    }
+
+    await this.calculateWitness(inputs);
+
+    return originalWitness;
+  }
+
+  /**
+   * Loads a map of circuit signal names to their corresponding witness indices.
+   *
+   * Parses the `.sym` file generated during circuit compilation to build the mapping.
+   * Signals that do not appear in the witness are skipped.
+   *
+   * @returns {Promise<Partial<Record<string, number>>>} A map of signal names to witness indices.
+   */
+  private async loadSignalToIndexMap(): Promise<Partial<Record<string, number>>> {
+    const symFile = this.mustGetArtifactsFilePath("sym");
+
+    const signalToWitnessIndex: Record<string, number> = {};
+
+    const symsStr = await fs.promises.readFile(symFile, "utf8");
+
+    const signals = symsStr.split("\n");
+
+    for (let i = 0; i < signals.length; i++) {
+      const signal = signals[i].split(",");
+
+      if (signal.length != 4 || Number(signal[1]) < 0) {
+        continue;
+      }
+
+      signalToWitnessIndex[signal[3]] = Number(signal[1]);
+    }
+
+    return signalToWitnessIndex;
   }
 }

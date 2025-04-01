@@ -42,6 +42,7 @@
     "snarkjs": "0.7.5"
   },
   "devDependencies": {
+    "@iden3/binfileutils": "^0.0.12",
     "@nomicfoundation/hardhat-ethers": "3.0.5",
     "@nomiclabs/hardhat-vyper": "^3.0.7",
     "@solarity/solidity-lib": "3.0.0-rc.3",
@@ -53,6 +54,7 @@
     "chai": "^4.4.1",
     "chai-as-promised": "^7.1.1",
     "ethers": "^6.11.1",
+    "ffjavascript": "^0.3.1",
     "hardhat": "2.22.7",
     "husky": "^9.0.11",
     "mocha": "^10.3.0",
