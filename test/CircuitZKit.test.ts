@@ -517,23 +517,20 @@ describe("CircuitZKit", () => {
         verifierDirPath: getVerifiersDirFullPath(),
       });
 
+      const tmpDir = path.join(os.tmpdir(), ".zkit");
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+
       const b = 10,
         a = 20;
-
-      const tmpDir = path.join(os.tmpdir(), ".zkit");
-
-      fs.rmSync(tmpDir, { force: true, recursive: true });
 
       expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
       expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
       expect(await multiplierCircuit.calculateWitness({ a, b: 30 })).to.deep.eq([1n, 600n, 20n, 30n]);
+
+      expect(fs.readdirSync(tmpDir)).to.be.deep.equal([`${circuitName}.wtns`]);
     });
-  });
 
-  describe("modifyWitness", () => {
-    useFixtureProject("simple-circuits");
-
-    it("should correctly modify witness", async () => {
+    it("should correctly calculate witness with overrides", async () => {
       const circuitName = "Multiplier";
       const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
 
@@ -542,52 +539,26 @@ describe("CircuitZKit", () => {
         circuitArtifactsPath,
         verifierDirPath: getVerifiersDirFullPath(),
       });
-
-      const b = 10,
-        a = 20;
 
       const tmpDir = path.join(os.tmpdir(), ".zkit");
-      const r1csFile = multiplierCircuit.mustGetArtifactsFilePath("r1cs");
+      fs.rmSync(tmpDir, { recursive: true, force: true });
 
-      fs.rmSync(tmpDir, { force: true, recursive: true });
+      const b = 10,
+        a = 20;
 
-      expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
+      expect(await multiplierCircuit.calculateWitness({ a, b }, { "main.a": 15n })).to.deep.eq([1n, 200n, 15n, 10n]);
+      expect(await multiplierCircuit.calculateWitness({ a, b }, { "main.b": 100n })).to.deep.eq([1n, 200n, 20n, 100n]);
+      expect(await multiplierCircuit.calculateWitness({ a, b: 30 }, { "main.a": 70n, "main.out": 50n })).to.deep.eq([
+        1n,
+        50n,
+        70n,
+        30n,
+      ]);
 
-      let witnessFilePath = await multiplierCircuit.getWitnessFilePath();
-      expect(witnessFilePath).to.be.equal(path.join(tmpDir, `${circuitName}.wtns`));
-
-      expect(await snarkjs.wtns.check(r1csFile, witnessFilePath)).to.be.true;
-
-      let modifiedWitness = await multiplierCircuit.modifyWitness({ "main.a": 10n, "main.out": 150n });
-
-      expect(modifiedWitness).to.deep.eq([1n, 150n, 10n, 10n]);
-
-      witnessFilePath = await multiplierCircuit.getWitnessFilePath();
-      expect(witnessFilePath).to.be.equal(path.join(tmpDir, `${circuitName}_modified.wtns`));
-
-      const silentLogger = {
-        info: () => {},
-        warn: () => {},
-      };
-      expect(await snarkjs.wtns.check(r1csFile, witnessFilePath, silentLogger)).to.be.false;
-
-      let proof: Groth16ProofStruct = await multiplierCircuit.generateProof();
-      expect(await multiplierCircuit.verifyProof(proof)).to.be.false;
-
-      modifiedWitness = await multiplierCircuit.modifyWitness({ "main.b": 5n, "main.out": 100n });
-
-      expect(modifiedWitness).to.deep.eq([1n, 100n, 20n, 5n]);
-
-      witnessFilePath = await multiplierCircuit.getWitnessFilePath();
-      expect(witnessFilePath).to.be.equal(path.join(tmpDir, `${circuitName}_modified.wtns`));
-
-      expect(await snarkjs.wtns.check(r1csFile, witnessFilePath)).to.be.true;
-
-      proof = await multiplierCircuit.generateProof();
-      expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+      expect(fs.readdirSync(tmpDir)).to.be.deep.equal([`${circuitName}.wtns`]);
     });
 
-    it("should get exception if try to modify signal that doesn't exist", async () => {
+    it("should get exception if try to calculate witness with invalid overrides", async () => {
       const circuitName = "Multiplier";
       const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
 
@@ -600,33 +571,8 @@ describe("CircuitZKit", () => {
       const b = 10,
         a = 20;
 
-      expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
-
-      await expect(multiplierCircuit.modifyWitness({ "main.c": 10n, "main.out": 150n })).to.be.rejectedWith(
+      await expect(multiplierCircuit.calculateWitness({ a, b }, { "main.c": 10n })).to.be.rejectedWith(
         "Signal main.c not found in .sym file",
-      );
-    });
-
-    it("should get exception if try to modify signal that was removed during simplification", async () => {
-      const circuitName = "MultiDimensionalArray";
-      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
-
-      const mdCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
-        circuitName,
-        circuitArtifactsPath,
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
-
-      const a = 2;
-      const b = [
-        [3, 1],
-        [44, 2],
-      ];
-
-      await mdCircuit.calculateWitness({ a, b });
-
-      await expect(mdCircuit.modifyWitness({ "main.isEqual": 20n })).to.be.rejectedWith(
-        "Signal main.isEqual not found in .sym file",
       );
     });
   });
@@ -641,8 +587,6 @@ describe("CircuitZKit", () => {
 
       const b = 10,
         a = 20;
-
-      await multiplierCircuit.resetWitness();
 
       const proof: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b });
 
@@ -662,6 +606,61 @@ describe("CircuitZKit", () => {
 
       expect(proof.publicSignals).to.be.deep.eq([(b * a).toString()]);
       expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+    });
+
+    it("should correctly generate and verify proofs with witness overrides", async () => {
+      const circuitName = "Multiplier";
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
+
+      const r1csFile = multiplierCircuit.mustGetArtifactsFilePath("r1cs");
+
+      const tmpDir = path.join(os.tmpdir(), ".zkit");
+
+      const b = 10,
+        a = 20;
+
+      const proof1: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b }, { "main.a": 5n });
+
+      expect(proof1.publicSignals).to.be.deep.eq([(b * a).toString()]);
+      expect(await multiplierCircuit.verifyProof(proof1)).to.be.false;
+
+      const modifiedWitnessFile = path.join(tmpDir, `${circuitName}_modified.wtns`);
+      const silentLogger = {
+        info: () => {},
+        warn: () => {},
+      };
+      expect(await snarkjs.wtns.check(r1csFile, modifiedWitnessFile, silentLogger)).to.be.false;
+
+      const proof2: Groth16ProofStruct = await multiplierCircuit.generateProof(
+        { a, b },
+        { "main.a": 5n, "main.out": 50n },
+      );
+
+      expect(proof2.publicSignals).to.be.deep.eq([(b * 5).toString()]);
+      expect(await multiplierCircuit.verifyProof(proof2)).to.be.true;
+
+      expect(await snarkjs.wtns.check(r1csFile, modifiedWitnessFile, silentLogger)).to.be.true;
+
+      const proof3: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b }, { "main.out": 2n });
+
+      expect(proof3.publicSignals).to.be.deep.eq(["2"]);
+      expect(await multiplierCircuit.verifyProof(proof3)).to.be.false;
+
+      expect(await snarkjs.wtns.check(r1csFile, modifiedWitnessFile, silentLogger)).to.be.false;
+    });
+
+    it("should get exception if try to generate proof with invalid witness overrides", async () => {
+      const circuitName = "Multiplier";
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
+
+      const b = 10,
+        a = 20;
+
+      await expect(multiplierCircuit.generateProof({ a, b }, { a: 5n })).to.be.rejectedWith(
+        "Signal a not found in .sym file",
+      );
     });
   });
 
@@ -822,89 +821,6 @@ describe("CircuitZKit", () => {
       expect(function () {
         multiplierCircuit.getArtifactsFilePath(invalidFileType);
       }).to.throw(`Ambiguous file type: ${invalidFileType}.`);
-    });
-  });
-
-  describe("getWitnessFilePath", () => {
-    useFixtureProject("simple-circuits");
-
-    it("should get witness file path correctly", async () => {
-      const circuitName = "Multiplier";
-      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
-
-      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
-        circuitName,
-        circuitArtifactsPath,
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
-
-      const tmpDir = path.join(os.tmpdir(), ".zkit");
-      fs.rmSync(tmpDir, { force: true, recursive: true });
-
-      await expect(multiplierCircuit.getWitnessFilePath()).to.be.rejectedWith(
-        "Witness file not found. Inputs are required to calculate witness.",
-      );
-
-      const b = 10,
-        a = 20;
-
-      expect(await multiplierCircuit.getWitnessFilePath({ a, b })).to.be.equal(
-        path.join(tmpDir, `${circuitName}.wtns`),
-      );
-
-      fs.rmSync(tmpDir, { force: true, recursive: true });
-
-      await multiplierCircuit.calculateWitness({ a, b });
-      expect(await multiplierCircuit.getWitnessFilePath()).to.be.equal(path.join(tmpDir, `${circuitName}.wtns`));
-
-      await multiplierCircuit.modifyWitness({ "main.b": 50n });
-      expect(await multiplierCircuit.getWitnessFilePath()).to.be.equal(
-        path.join(tmpDir, `${circuitName}_modified.wtns`),
-      );
-    });
-  });
-
-  describe("resetWitness", () => {
-    useFixtureProject("simple-circuits");
-
-    it("should reset witness correctly", async () => {
-      const circuitName = "Multiplier";
-      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
-
-      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
-        circuitName,
-        circuitArtifactsPath,
-        verifierDirPath: getVerifiersDirFullPath(),
-      });
-
-      const tmpDir = path.join(os.tmpdir(), ".zkit");
-      const r1csFile = multiplierCircuit.mustGetArtifactsFilePath("r1cs");
-
-      fs.rmSync(tmpDir, { force: true, recursive: true });
-      await multiplierCircuit.resetWitness();
-
-      const b = 10,
-        a = 20;
-
-      await multiplierCircuit.calculateWitness({ a, b });
-
-      await multiplierCircuit.modifyWitness({ "main.a": 10n, "main.out": 150n });
-
-      let witnessFilePath = await multiplierCircuit.getWitnessFilePath();
-      expect(witnessFilePath).to.be.equal(path.join(tmpDir, `${circuitName}_modified.wtns`));
-
-      const silentLogger = {
-        info: () => {},
-        warn: () => {},
-      };
-      expect(await snarkjs.wtns.check(r1csFile, witnessFilePath, silentLogger)).to.be.false;
-
-      await multiplierCircuit.resetWitness();
-
-      witnessFilePath = await multiplierCircuit.getWitnessFilePath();
-      expect(witnessFilePath).to.be.equal(path.join(tmpDir, `${circuitName}.wtns`));
-
-      expect(await snarkjs.wtns.check(r1csFile, witnessFilePath)).to.be.true;
     });
   });
 });
