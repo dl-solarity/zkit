@@ -3,17 +3,12 @@ import path from "path";
 import * as snarkjs from "snarkjs";
 import { createHash } from "crypto";
 
-// @ts-ignore
-import * as binFileUtils from "@iden3/binfileutils";
-// @ts-ignore
-import * as wtnsUtils from "snarkjs/src/wtns_utils.js";
-
 import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
 import { Signals } from "../types/proof-utils";
 import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
 
 import { MAX_FILE_NAME_LENGTH } from "../constants";
-import { getTmpDir, getWitnessPrime, modifyWitnessArray, writeWitnessFile } from "../utils";
+import { getTmpDir, modifyWitnessArray, writeWitnessFile } from "../utils";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
@@ -55,7 +50,7 @@ export class CircuitZKit<Type extends ProvingSystemType> {
 
     const verifierFilePath = path.join(this._config.verifierDirPath, verifierFileName);
 
-    this._implementer.createVerifier(vKeyFilePath, verifierFilePath, languageExtension);
+    await this._implementer.createVerifier(vKeyFilePath, verifierFilePath, languageExtension);
   }
 
   /**
@@ -71,7 +66,7 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    * @returns {Promise<bigint[]>} The generated witness.
    */
   public async calculateWitness(inputs: Signals, witnessOverrides?: Record<string, bigint>): Promise<bigint[]> {
-    const wtnsFile = path.join(getTmpDir(), `${this.getCircuitName()}.wtns`);
+    const wtnsFile = this.getTemporaryWitnessPath();
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
     const symFile = this.mustGetArtifactsFilePath("sym");
 
@@ -102,24 +97,23 @@ export class CircuitZKit<Type extends ProvingSystemType> {
     witnessOverrides?: Record<string, bigint>,
   ): Promise<ProofStructByProtocol<Type>> {
     const zKeyFile = this.mustGetArtifactsFilePath("zkey");
+    const witnessFile = this.getTemporaryWitnessPath();
 
-    const tmpDir = getTmpDir();
-    const circuitName = this.getCircuitName();
+    let proof: ProofStructByProtocol<Type>;
 
-    const witness = await this.calculateWitness(inputs, witnessOverrides);
+    try {
+      const witness = await this.calculateWitness(inputs, witnessOverrides);
 
-    let witnessFile = path.join(tmpDir, `${circuitName}.wtns`);
+      if (witnessOverrides) {
+        await writeWitnessFile(witnessFile, witness);
+      }
 
-    if (witnessOverrides) {
-      const modifiedWitnessFile = path.join(tmpDir, `${circuitName}_modified.wtns`);
-
-      const prime = await getWitnessPrime(witnessFile);
-      await writeWitnessFile(modifiedWitnessFile, witness, prime);
-
-      witnessFile = modifiedWitnessFile;
+      proof = await this._implementer.generateProof(zKeyFile, witnessFile);
+    } finally {
+      fs.rmSync(witnessFile);
     }
 
-    return await this._implementer.generateProof(zKeyFile, witnessFile);
+    return proof;
   }
 
   /**
@@ -239,5 +233,9 @@ export class CircuitZKit<Type extends ProvingSystemType> {
     }
 
     return path.join(fileDir, fileName);
+  }
+
+  private getTemporaryWitnessPath(): string {
+    return path.join(getTmpDir(), `${this.getCircuitName()}.wtns`);
   }
 }

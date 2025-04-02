@@ -69,36 +69,16 @@ export async function modifyWitnessArray(
 }
 
 /**
- * Extracts the prime field value from a `.wtns` witness file.
- *
- * @param {string} wtnsPath - Full path to the `.wtns` witness file.
- * @returns {Promise<bigint>} The prime field value used in the witness file.
- */
-export async function getWitnessPrime(wtnsPath: string): Promise<bigint> {
-  const { fd, sections } = await binFileUtils.readBinFile(wtnsPath, "wtns", 2);
-
-  await binFileUtils.startReadUniqueSection(fd, sections, 1);
-
-  const n8 = await fd.readULE32();
-  const prime = await binFileUtils.readBigInt(fd, n8);
-  await fd.readULE32();
-
-  await binFileUtils.endReadSection(fd);
-  await fd.close();
-
-  return prime;
-}
-
-/**
  * Writes a witness array to a `.wtns` binary file.
  *
  * Reference: https://github.com/iden3/snarkjs/blob/bf28b1cb5aefcefab7e0f70f1fa5e40f764cca72/src/wtns_utils.js#L25C42-L25C47
  *
- * @param {string} witnessPath - Full path where the `.wtns` file will be saved.
+ * @param {string} witnessPath - Path to the existing `.wtns` file to read prime and overwrite with new witness.
  * @param {bigint[]} witness - The witness array to write.
- * @param {bigint} prime - The prime field of the circuit.
  */
-export async function writeWitnessFile(witnessPath: string, witness: bigint[], prime: bigint) {
+export async function writeWitnessFile(witnessPath: string, witness: bigint[]) {
+  const prime = await getWitnessPrime(witnessPath);
+
   const fd = await binFileUtils.createBinFile(witnessPath, "wtns", 2, 2);
 
   await binFileUtils.startWriteSection(fd, 1);
@@ -149,4 +129,25 @@ async function loadSignalToIndexMap(symFilePath: string): Promise<Partial<Record
   }
 
   return signalToWitnessIndex;
+}
+
+/**
+ * Extracts the prime field value from a `.wtns` witness file.
+ *
+ * @param {string} wtnsPath - Full path to the `.wtns` witness file.
+ * @returns {Promise<bigint>} The prime field value used in the witness file.
+ */
+async function getWitnessPrime(wtnsPath: string): Promise<bigint> {
+  const { fd, sections } = await binFileUtils.readBinFile(wtnsPath, "wtns", 2);
+
+  await binFileUtils.startReadUniqueSection(fd, sections, 1);
+
+  const n8 = await fd.readULE32();
+  const prime = await binFileUtils.readBigInt(fd, n8);
+  await fd.readULE32();
+
+  await binFileUtils.endReadSection(fd);
+  await fd.close();
+
+  return prime;
 }

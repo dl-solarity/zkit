@@ -2,7 +2,6 @@ import ejs from "ejs";
 import fs from "fs";
 import path from "path";
 import * as os from "os";
-import * as snarkjs from "snarkjs";
 
 import { expect } from "chai";
 import { createHash } from "crypto";
@@ -613,10 +612,6 @@ describe("CircuitZKit", () => {
 
       const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
 
-      const r1csFile = multiplierCircuit.mustGetArtifactsFilePath("r1cs");
-
-      const tmpDir = path.join(os.tmpdir(), ".zkit");
-
       const b = 10,
         a = 20;
 
@@ -624,13 +619,6 @@ describe("CircuitZKit", () => {
 
       expect(proof1.publicSignals).to.be.deep.eq([(b * a).toString()]);
       expect(await multiplierCircuit.verifyProof(proof1)).to.be.false;
-
-      const modifiedWitnessFile = path.join(tmpDir, `${circuitName}_modified.wtns`);
-      const silentLogger = {
-        info: () => {},
-        warn: () => {},
-      };
-      expect(await snarkjs.wtns.check(r1csFile, modifiedWitnessFile, silentLogger)).to.be.false;
 
       const proof2: Groth16ProofStruct = await multiplierCircuit.generateProof(
         { a, b },
@@ -640,14 +628,10 @@ describe("CircuitZKit", () => {
       expect(proof2.publicSignals).to.be.deep.eq([(b * 5).toString()]);
       expect(await multiplierCircuit.verifyProof(proof2)).to.be.true;
 
-      expect(await snarkjs.wtns.check(r1csFile, modifiedWitnessFile, silentLogger)).to.be.true;
-
       const proof3: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b }, { "main.out": 2n });
 
       expect(proof3.publicSignals).to.be.deep.eq(["2"]);
       expect(await multiplierCircuit.verifyProof(proof3)).to.be.false;
-
-      expect(await snarkjs.wtns.check(r1csFile, modifiedWitnessFile, silentLogger)).to.be.false;
     });
 
     it("should get exception if try to generate proof with invalid witness overrides", async () => {
