@@ -8,7 +8,7 @@ import { Signals } from "../types/proof-utils";
 import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
 
 import { MAX_FILE_NAME_LENGTH } from "../constants";
-import { getTmpDir, modifyWitnessArray, writeWitnessFile } from "../utils";
+import { getTmpDir, modifyWitnessArray, checkWitnessOverrides, writeWitnessFile } from "../utils";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
@@ -68,13 +68,20 @@ export class CircuitZKit<Type extends ProvingSystemType> {
   public async calculateWitness(inputs: Signals, witnessOverrides?: Record<string, bigint>): Promise<bigint[]> {
     const wtnsFile = this.getTemporaryWitnessPath();
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
-    const symFile = this.mustGetArtifactsFilePath("sym");
+
+    let signalIndexes: Record<string, number> = {};
+
+    if (witnessOverrides) {
+      const symFile = this.mustGetArtifactsFilePath("sym");
+
+      signalIndexes = await checkWitnessOverrides(symFile, witnessOverrides);
+    }
 
     await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
 
     const wtnsJson = (await snarkjs.wtns.exportJson(wtnsFile)) as bigint[];
 
-    return witnessOverrides ? modifyWitnessArray(wtnsJson, symFile, witnessOverrides) : wtnsJson;
+    return witnessOverrides ? modifyWitnessArray(wtnsJson, signalIndexes, witnessOverrides) : wtnsJson;
   }
 
   /**
@@ -110,7 +117,9 @@ export class CircuitZKit<Type extends ProvingSystemType> {
 
       proof = await this._implementer.generateProof(zKeyFile, witnessFile);
     } finally {
-      fs.rmSync(witnessFile);
+      if (fs.existsSync(witnessFile)) {
+        fs.rmSync(witnessFile);
+      }
     }
 
     return proof;
@@ -181,6 +190,18 @@ export class CircuitZKit<Type extends ProvingSystemType> {
   }
 
   /**
+   * Returns the path to the temporary witness file.
+   *
+   * The file is stored in the system temporary directory and is named after the circuit.
+   * This file is used for intermediate witness generation and may be deleted after usage.
+   *
+   * @returns {string} The full path to the temporary `.wtns` file.
+   */
+  public getTemporaryWitnessPath(): string {
+    return path.join(getTmpDir(), `${this.getCircuitName()}.wtns`);
+  }
+
+  /**
    * Returns the path to the file of the given type inside artifacts directory. Throws an error if the file doesn't exist.
    *
    * @param {ArtifactsFileType} fileType - The type of the file.
@@ -233,9 +254,5 @@ export class CircuitZKit<Type extends ProvingSystemType> {
     }
 
     return path.join(fileDir, fileName);
-  }
-
-  private getTemporaryWitnessPath(): string {
-    return path.join(getTmpDir(), `${this.getCircuitName()}.wtns`);
   }
 }

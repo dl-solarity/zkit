@@ -571,7 +571,36 @@ describe("CircuitZKit", () => {
         a = 20;
 
       await expect(multiplierCircuit.calculateWitness({ a, b }, { "main.c": 10n })).to.be.rejectedWith(
-        "Signal main.c not found in .sym file",
+        "Signals not found in .sym file: main.c",
+      );
+
+      await expect(
+        multiplierCircuit.calculateWitness({ a, b }, { "main.a": 10n, "main.output": 10n, "main.c": 10n }),
+      ).to.be.rejectedWith("Signals not found in .sym file: main.output, main.c");
+
+      await expect(multiplierCircuit.calculateWitness({ a, b }, { "main.c": 10n, "main.d": 10n })).to.be.rejectedWith(
+        "Signals not found in .sym file: main.c, main.d",
+      );
+    });
+
+    it("should get exception if try to calculate witness with overrides for a signal that was simplified", async () => {
+      const circuitName = "MultiDimensionalArray";
+      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const mdCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
+        circuitName,
+        circuitArtifactsPath,
+        verifierDirPath: getVerifiersDirFullPath(),
+      });
+
+      const a = 2;
+      const b = [
+        [3, 1],
+        [44, 2],
+      ];
+
+      await expect(mdCircuit.calculateWitness({ a, b }, { "main.isEqual": 20n })).to.be.rejectedWith(
+        "Signals not found in .sym file: main.isEqual",
       );
     });
   });
@@ -643,7 +672,7 @@ describe("CircuitZKit", () => {
         a = 20;
 
       await expect(multiplierCircuit.generateProof({ a, b }, { a: 5n })).to.be.rejectedWith(
-        "Signal a not found in .sym file",
+        "Signals not found in .sym file: a",
       );
     });
   });

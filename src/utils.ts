@@ -4,6 +4,8 @@ import path from "path";
 
 import { BN128_CURVE_NAME } from "./constants";
 
+import * as readline from "readline";
+
 import * as snarkjs from "snarkjs";
 // @ts-ignore
 import { Scalar } from "ffjavascript";
@@ -35,32 +37,68 @@ export function getTmpDir(): string {
 }
 
 /**
- * Modifies specific signal values in a witness array.
- * Substitutes values in the witness array at positions defined by the `.sym` file.
+ * Validates the provided witness overrides against the `.sym` file and returns the signal-to-index map.
  *
- * Signal names in `witnessOverrides` must be provided in their full form as represented in the `.sym` file, e.g.,
+ * Reads the `.sym` file line by line and builds a mapping of signal names to their witness indices.
+ * Ensures that all keys in `overrides` exist in the `.sym` file.
+ * Throws an error listing all missing signals if any override key is not found.
+ *
+ * Signal names in `overrides` must be in their full form as represented in the `.sym` file, e.g.,
  * `main.signal`, `main.component.signal`, or `main.component.signal[n][m]`.
  *
- * Throws an error if any of the provided signal names is not found in the `.sym` file.
+ * @param {string} symFile - Path to the `.sym` file.
+ * @param {Record<string, bigint>} overrides - Map of signal names to new witness values.
+ * @returns {Promise<Record<string, number>>} Map of signal names to their corresponding witness indices.
+ */
+export async function checkWitnessOverrides(
+  symFile: string,
+  overrides: Record<string, bigint>,
+): Promise<Record<string, number>> {
+  const signalToWitnessIndex: Record<string, number> = {};
+
+  const missingSignals = new Set(Object.keys(overrides));
+
+  const fileStream = fs.createReadStream(symFile, { encoding: "utf8" });
+  const signals = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+  for await (const signal of signals) {
+    const signalInfo = signal.split(",");
+
+    if (signalInfo.length != 4 || Number(signalInfo[1]) < 0) {
+      continue;
+    }
+
+    signalToWitnessIndex[signalInfo[3]] = Number(signalInfo[1]);
+
+    missingSignals.delete(signalInfo[3]);
+  }
+
+  if (missingSignals.size > 0) {
+    throw new Error(`Signals not found in .sym file: ${Array.from(missingSignals).join(", ")}`);
+  }
+
+  return signalToWitnessIndex;
+}
+
+/**
+ * Modifies specific signal values in a witness array.
+ * Substitutes signal from `overrides` in the witness array at positions defined in `signalIndexes`.
+ *
+ * Signal names in `overrides` must be provided in their full form as represented in the `.sym` file, e.g.,
+ * `main.signal`, `main.component.signal`, or `main.component.signal[n][m]`.
  *
  * @param {bigint[]} witness - The original witness array.
- * @param {string} symFile - Path to the `.sym` file containing signal-to-witness index mappings.
+ * @param {Record<string, number>} signalIndexes - Map of signal names to their witness indices.
  * @param {Record<string, bigint>} overrides - Map of signal names to new witness values.
  * @returns {Promise<bigint[]>} The modified witness array.
  */
 export async function modifyWitnessArray(
   witness: bigint[],
-  symFile: string,
+  signalIndexes: Record<string, number>,
   overrides: Record<string, bigint>,
 ): Promise<bigint[]> {
-  const signalIndexes = await loadSignalToIndexMap(symFile);
-
   for (const [signal, value] of Object.entries(overrides)) {
     const index = signalIndexes[signal];
-
-    if (index === undefined) {
-      throw new Error(`Signal ${signal} not found in .sym file`);
-    }
 
     witness[index] = value;
   }
@@ -100,35 +138,6 @@ export async function writeWitnessFile(witnessPath: string, witness: bigint[]) {
   await binFileUtils.endWriteSection(fd, 2);
 
   await fd.close();
-}
-
-/**
- * Loads a map of circuit signal names to their corresponding witness indices.
- *
- * Parses the `.sym` file generated during circuit compilation to build the mapping.
- * Signals that do not appear in the witness are skipped.
- *
- * @param {string} symFilePath - The `.sym` file path.
- * @returns {Promise<Partial<Record<string, number>>>} A map of signal names to witness indices.
- */
-async function loadSignalToIndexMap(symFilePath: string): Promise<Partial<Record<string, number>>> {
-  const signalToWitnessIndex: Record<string, number> = {};
-
-  const symsStr = await fs.promises.readFile(symFilePath, "utf8");
-
-  const signals = symsStr.split("\n");
-
-  for (let i = 0; i < signals.length; i++) {
-    const signal = signals[i].split(",");
-
-    if (signal.length != 4 || Number(signal[1]) < 0) {
-      continue;
-    }
-
-    signalToWitnessIndex[signal[3]] = Number(signal[1]);
-  }
-
-  return signalToWitnessIndex;
 }
 
 /**
