@@ -516,16 +516,92 @@ describe("CircuitZKit", () => {
         verifierDirPath: getVerifiersDirFullPath(),
       });
 
+      const tmpDir = path.join(os.tmpdir(), ".zkit");
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+
       const b = 10,
         a = 20;
-
-      const tmpDir = path.join(os.tmpdir(), ".zkit");
-
-      fs.rmSync(tmpDir, { force: true, recursive: true });
 
       expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
       expect(await multiplierCircuit.calculateWitness({ a, b })).to.deep.eq([1n, 200n, 20n, 10n]);
       expect(await multiplierCircuit.calculateWitness({ a, b: 30 })).to.deep.eq([1n, 600n, 20n, 30n]);
+
+      expect(fs.readdirSync(tmpDir)).to.be.deep.equal([`${circuitName}.wtns`]);
+    });
+
+    it("should correctly calculate witness with overrides", async () => {
+      const circuitName = "Multiplier";
+      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
+        circuitName,
+        circuitArtifactsPath,
+        verifierDirPath: getVerifiersDirFullPath(),
+      });
+
+      const tmpDir = path.join(os.tmpdir(), ".zkit");
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+
+      const b = 10,
+        a = 20;
+
+      expect(await multiplierCircuit.calculateWitness({ a, b }, { "main.a": 15n })).to.deep.eq([1n, 200n, 15n, 10n]);
+      expect(await multiplierCircuit.calculateWitness({ a, b }, { "main.b": 100n })).to.deep.eq([1n, 200n, 20n, 100n]);
+      expect(await multiplierCircuit.calculateWitness({ a, b: 30 }, { "main.a": 70n, "main.out": 50n })).to.deep.eq([
+        1n,
+        50n,
+        70n,
+        30n,
+      ]);
+
+      expect(fs.readdirSync(tmpDir)).to.be.deep.equal([`${circuitName}.wtns`]);
+    });
+
+    it("should get exception if try to calculate witness with invalid overrides", async () => {
+      const circuitName = "Multiplier";
+      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
+        circuitName,
+        circuitArtifactsPath,
+        verifierDirPath: getVerifiersDirFullPath(),
+      });
+
+      const b = 10,
+        a = 20;
+
+      await expect(multiplierCircuit.calculateWitness({ a, b }, { "main.c": 10n })).to.be.rejectedWith(
+        "Signals not found in .sym file: main.c",
+      );
+
+      await expect(
+        multiplierCircuit.calculateWitness({ a, b }, { "main.a": 10n, "main.output": 10n, "main.c": 10n }),
+      ).to.be.rejectedWith("Signals not found in .sym file: main.output, main.c");
+
+      await expect(multiplierCircuit.calculateWitness({ a, b }, { "main.c": 10n, "main.d": 10n })).to.be.rejectedWith(
+        "Signals not found in .sym file: main.c, main.d",
+      );
+    });
+
+    it("should get exception if try to calculate witness with overrides for a signal that was simplified", async () => {
+      const circuitName = "MultiDimensionalArray";
+      const circuitArtifactsPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const mdCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
+        circuitName,
+        circuitArtifactsPath,
+        verifierDirPath: getVerifiersDirFullPath(),
+      });
+
+      const a = 2;
+      const b = [
+        [3, 1],
+        [44, 2],
+      ];
+
+      await expect(mdCircuit.calculateWitness({ a, b }, { "main.isEqual": 20n })).to.be.rejectedWith(
+        "Signals not found in .sym file: main.isEqual",
+      );
     });
   });
 
@@ -558,6 +634,46 @@ describe("CircuitZKit", () => {
 
       expect(proof.publicSignals).to.be.deep.eq([(b * a).toString()]);
       expect(await multiplierCircuit.verifyProof(proof)).to.be.true;
+    });
+
+    it("should correctly generate and verify proofs with witness overrides", async () => {
+      const circuitName = "Multiplier";
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
+
+      const b = 10,
+        a = 20;
+
+      const proof1: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b }, { "main.a": 5n });
+
+      expect(proof1.publicSignals).to.be.deep.eq([(b * a).toString()]);
+      expect(await multiplierCircuit.verifyProof(proof1)).to.be.false;
+
+      const proof2: Groth16ProofStruct = await multiplierCircuit.generateProof(
+        { a, b },
+        { "main.a": 5n, "main.out": 50n },
+      );
+
+      expect(proof2.publicSignals).to.be.deep.eq([(b * 5).toString()]);
+      expect(await multiplierCircuit.verifyProof(proof2)).to.be.true;
+
+      const proof3: Groth16ProofStruct = await multiplierCircuit.generateProof({ a, b }, { "main.out": 2n });
+
+      expect(proof3.publicSignals).to.be.deep.eq(["2"]);
+      expect(await multiplierCircuit.verifyProof(proof3)).to.be.false;
+    });
+
+    it("should get exception if try to generate proof with invalid witness overrides", async () => {
+      const circuitName = "Multiplier";
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16");
+
+      const b = 10,
+        a = 20;
+
+      await expect(multiplierCircuit.generateProof({ a, b }, { a: 5n })).to.be.rejectedWith(
+        "Signals not found in .sym file: a",
+      );
     });
   });
 
