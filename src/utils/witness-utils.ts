@@ -1,40 +1,11 @@
-import os from "os";
 import fs from "fs";
-import path from "path";
-
-import { BN128_CURVE_NAME } from "./constants";
 
 import * as readline from "readline";
 
-import * as snarkjs from "snarkjs";
 // @ts-ignore
 import { Scalar } from "ffjavascript";
 // @ts-ignore
 import * as binFileUtils from "@iden3/binfileutils";
-
-/**
- * Terminates the BN128 curve instance used by SnarkJS.
- */
-export async function terminateCurve() {
-  await (await (snarkjs as any).curves.getCurveFromName(BN128_CURVE_NAME)).terminate();
-}
-
-/**
- * Returns the path to the temporary directory used by ZKit.
- *
- * Creates the directory if it does not exist.
- *
- * @returns {string} The path to the temporary `.zkit` directory inside the OS temp folder.
- */
-export function getTmpDir(): string {
-  const tmpDir = path.join(os.tmpdir(), ".zkit");
-
-  if (!fs.existsSync(tmpDir)) {
-    fs.mkdirSync(tmpDir, { recursive: true });
-  }
-
-  return tmpDir;
-}
 
 /**
  * Validates the provided witness overrides against the `.sym` file and returns the signal-to-index map.
