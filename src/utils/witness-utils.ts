@@ -17,19 +17,43 @@ import * as binFileUtils from "@iden3/binfileutils";
  * Signal names in `overrides` must be in their full form as represented in the `.sym` file, e.g.,
  * `main.signal`, `main.component.signal`, or `main.component.signal[n][m]`.
  *
- * @param {string} symFile - Path to the `.sym` file.
+ * @param {string} symFilePath - Path to the `.sym` file.
  * @param {Record<string, bigint>} overrides - Map of signal names to new witness values.
  * @returns {Promise<Record<string, number>>} Map of signal names to their corresponding witness indices.
  */
 export async function checkWitnessOverrides(
-  symFile: string,
+  symFilePath: string,
   overrides: Record<string, bigint>,
 ): Promise<Record<string, number>> {
   const signalToWitnessIndex: Record<string, number> = {};
 
   const missingSignals = new Set(Object.keys(overrides));
 
-  const fileStream = fs.createReadStream(symFile, { encoding: "utf8" });
+  await iterateSymFile(symFilePath, (signalInfo) => {
+    signalToWitnessIndex[signalInfo[3]] = Number(signalInfo[1]);
+
+    missingSignals.delete(signalInfo[3]);
+  });
+
+  if (missingSignals.size > 0) {
+    throw new Error(`Signals not found in .sym file: ${Array.from(missingSignals).join(", ")}`);
+  }
+
+  return signalToWitnessIndex;
+}
+
+/**
+ * Iterates over signal entries in a `.sym` file line by line.
+ *
+ * Each line is parsed into a `signalInfo` array.
+ * Only entries with a non-negative witness index are considered valid and passed to the callback.
+ *
+ * @param {string} symFilePath - The full path to the `.sym` file to read.
+ * @param {(signalInfo: string[]) => void} onSignal - Callback invoked for each valid signal line.
+ *        The `signalInfo` array has the following structure: [signalId, witnessIndex, componentId, signalName].
+ */
+export async function iterateSymFile(symFilePath: string, onSignal: (signalInfo: string[]) => void) {
+  const fileStream = fs.createReadStream(symFilePath, { encoding: "utf8" });
   const signals = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
   for await (const signal of signals) {
@@ -39,16 +63,8 @@ export async function checkWitnessOverrides(
       continue;
     }
 
-    signalToWitnessIndex[signalInfo[3]] = Number(signalInfo[1]);
-
-    missingSignals.delete(signalInfo[3]);
+    onSignal(signalInfo);
   }
-
-  if (missingSignals.size > 0) {
-    throw new Error(`Signals not found in .sym file: ${Array.from(missingSignals).join(", ")}`);
-  }
-
-  return signalToWitnessIndex;
 }
 
 /**
