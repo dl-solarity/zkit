@@ -7,6 +7,8 @@ import { Scalar } from "ffjavascript";
 // @ts-ignore
 import * as binFileUtils from "@iden3/binfileutils";
 
+import { SignalInfo } from "../types/witness-utils";
+
 /**
  * Validates the provided witness overrides against the `.sym` file and returns the signal-to-index map.
  *
@@ -30,9 +32,9 @@ export async function checkWitnessOverrides(
   const missingSignals = new Set(Object.keys(overrides));
 
   await iterateSymFile(symFilePath, (signalInfo) => {
-    signalToWitnessIndex[signalInfo[3]] = Number(signalInfo[1]);
+    signalToWitnessIndex[signalInfo.signalName] = Number(signalInfo.witnessIndex);
 
-    missingSignals.delete(signalInfo[3]);
+    missingSignals.delete(signalInfo.signalName);
   });
 
   if (missingSignals.size > 0) {
@@ -49,21 +51,27 @@ export async function checkWitnessOverrides(
  * Only entries with a non-negative witness index are considered valid and passed to the callback.
  *
  * @param {string} symFilePath - The full path to the `.sym` file to read.
- * @param {(signalInfo: string[]) => void} onSignal - Callback invoked for each valid signal line.
- *        The `signalInfo` array has the following structure: [signalId, witnessIndex, componentId, signalName].
+ * @param {(signalInfo: SignalInfo) => void} onSignal - Callback invoked for each valid signal line.
  */
-export async function iterateSymFile(symFilePath: string, onSignal: (signalInfo: string[]) => void) {
+export async function iterateSymFile(symFilePath: string, onSignal: (signalInfo: SignalInfo) => void) {
   const fileStream = fs.createReadStream(symFilePath, { encoding: "utf8" });
   const signals = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
   for await (const signal of signals) {
     const signalInfo = signal.split(",");
 
-    if (signalInfo.length != 4 || Number(signalInfo[1]) < 0) {
+    const witnessIndex = Number(signalInfo[1]);
+
+    if (signalInfo.length != 4 || witnessIndex < 0) {
       continue;
     }
 
-    onSignal(signalInfo);
+    onSignal({
+      id: Number(signalInfo[0]),
+      witnessIndex: witnessIndex,
+      componentId: Number(signalInfo[2]),
+      signalName: signalInfo[3],
+    });
   }
 }
 
