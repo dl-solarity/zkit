@@ -3,9 +3,17 @@ import path from "path";
 import * as snarkjs from "snarkjs";
 import { createHash } from "crypto";
 
-import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
-import { Signals } from "../types/proof-utils";
-import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
+import {
+  ArtifactsFileType,
+  CircuitZKitConfig,
+  VerifierLanguageType,
+  Signals,
+  CalldataByProtocol,
+  IProtocolImplementer,
+  ProofStructByProtocol,
+  ProvingSystemType,
+  NumberLike,
+} from "../types";
 
 import { MAX_FILE_NAME_LENGTH } from "../constants";
 import { getTmpDir, modifyWitnessArray, checkWitnessOverrides, writeWitnessFile } from "../utils";
@@ -69,7 +77,7 @@ export class CircuitZKit<Type extends ProvingSystemType> {
     const wtnsFile = this.getTemporaryWitnessPath();
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
-    let signalIndexes: Record<string, number> = {};
+    let signalIndexes: Record<string, NumberLike> = {};
 
     if (witnessOverrides) {
       const symFile = this.mustGetArtifactsFilePath("sym");

@@ -7,7 +7,7 @@ import { Scalar } from "ffjavascript";
 // @ts-ignore
 import * as binFileUtils from "@iden3/binfileutils";
 
-import { SignalInfo } from "../types/witness-utils";
+import { NumberLike, SignalInfo } from "../types";
 
 /**
  * Validates the provided witness overrides against the `.sym` file and returns the signal-to-index map.
@@ -21,20 +21,22 @@ import { SignalInfo } from "../types/witness-utils";
  *
  * @param {string} symFilePath - Path to the `.sym` file.
  * @param {Record<string, bigint>} overrides - Map of signal names to new witness values.
- * @returns {Promise<Record<string, number>>} Map of signal names to their corresponding witness indices.
+ * @returns {Promise<Record<string, NumberLike>>} Map of signal names to their corresponding witness indices.
  */
 export async function checkWitnessOverrides(
   symFilePath: string,
   overrides: Record<string, bigint>,
-): Promise<Record<string, number>> {
-  const signalToWitnessIndex: Record<string, number> = {};
+): Promise<Record<string, NumberLike>> {
+  const signalToWitnessIndex: Record<string, NumberLike> = {};
 
   const missingSignals = new Set(Object.keys(overrides));
 
   await iterateSymFile(symFilePath, (signalInfo) => {
-    signalToWitnessIndex[signalInfo.signalName] = Number(signalInfo.witnessIndex);
+    if (BigInt(signalInfo.witnessIndex) >= 0) {
+      signalToWitnessIndex[signalInfo.signalName] = signalInfo.witnessIndex;
 
-    missingSignals.delete(signalInfo.signalName);
+      missingSignals.delete(signalInfo.signalName);
+    }
   });
 
   if (missingSignals.size > 0) {
@@ -47,11 +49,10 @@ export async function checkWitnessOverrides(
 /**
  * Iterates over signal entries in a `.sym` file line by line.
  *
- * Each line is parsed into a `signalInfo` array.
- * Only entries with a non-negative witness index are considered valid and passed to the callback.
+ * Each line is parsed into a `SignalInfo` object which is passed to the provided callback.
  *
  * @param {string} symFilePath - The full path to the `.sym` file to read.
- * @param {(signalInfo: SignalInfo) => void} onSignal - Callback invoked for each valid signal line.
+ * @param {(signalInfo: SignalInfo) => void} onSignal - Callback invoked for each signal line.
  */
 export async function iterateSymFile(symFilePath: string, onSignal: (signalInfo: SignalInfo) => void) {
   const fileStream = fs.createReadStream(symFilePath, { encoding: "utf8" });
@@ -60,16 +61,14 @@ export async function iterateSymFile(symFilePath: string, onSignal: (signalInfo:
   for await (const signal of signals) {
     const signalInfo = signal.split(",");
 
-    const witnessIndex = Number(signalInfo[1]);
-
-    if (signalInfo.length != 4 || witnessIndex < 0) {
+    if (signalInfo.length != 4) {
       continue;
     }
 
     onSignal({
-      id: Number(signalInfo[0]),
-      witnessIndex: witnessIndex,
-      componentId: Number(signalInfo[2]),
+      id: BigInt(signalInfo[0]),
+      witnessIndex: BigInt(signalInfo[1]),
+      componentId: BigInt(signalInfo[2]),
       signalName: signalInfo[3],
     });
   }
@@ -83,17 +82,17 @@ export async function iterateSymFile(symFilePath: string, onSignal: (signalInfo:
  * `main.signal`, `main.component.signal`, or `main.component.signal[n][m]`.
  *
  * @param {bigint[]} witness - The original witness array.
- * @param {Record<string, number>} signalIndexes - Map of signal names to their witness indices.
+ * @param {Record<string, NumberLike>} signalIndexes - Map of signal names to their witness indices.
  * @param {Record<string, bigint>} overrides - Map of signal names to new witness values.
  * @returns {Promise<bigint[]>} The modified witness array.
  */
 export async function modifyWitnessArray(
   witness: bigint[],
-  signalIndexes: Record<string, number>,
+  signalIndexes: Record<string, NumberLike>,
   overrides: Record<string, bigint>,
 ): Promise<bigint[]> {
   for (const [signal, value] of Object.entries(overrides)) {
-    const index = signalIndexes[signal];
+    const index = Number(signalIndexes[signal]);
 
     witness[index] = value;
   }

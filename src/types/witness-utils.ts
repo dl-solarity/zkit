@@ -1,6 +1,8 @@
+import { NumberLike } from "./proof-utils";
+
 export type SignalInfo = {
-  id: number;
-  witnessIndex: number;
-  componentId: number;
+  id: NumberLike;
+  witnessIndex: NumberLike;
+  componentId: NumberLike;
   signalName: string;
 };
