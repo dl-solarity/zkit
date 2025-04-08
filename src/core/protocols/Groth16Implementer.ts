@@ -3,7 +3,7 @@ import * as snarkjs from "snarkjs";
 
 import { AbstractProtocolImplementer } from "./AbstractImplementer";
 
-import { Groth16ProofStruct, Groth16CalldataStruct, ProvingSystemType } from "../../types/protocols";
+import { Groth16ProofStruct, Groth16CalldataStruct, ProvingSystemType } from "../../types";
 
 import { terminateCurve } from "../../utils";
 

@@ -7,8 +7,8 @@ import {
   ProvingSystemType,
   ProofStructByProtocol,
   CalldataByProtocol,
-} from "../../types/protocols";
-import { VerifierLanguageType } from "../../types/circuit-zkit";
+  VerifierLanguageType,
+} from "../../types";
 
 export abstract class AbstractProtocolImplementer<T extends ProvingSystemType> implements IProtocolImplementer<T> {
   public async createVerifier(

@@ -3,7 +3,7 @@ import * as snarkjs from "snarkjs";
 
 import { AbstractProtocolImplementer } from "./AbstractImplementer";
 
-import { PlonkProofStruct, PlonkCalldataStruct, ProvingSystemType } from "../../types/protocols";
+import { PlonkProofStruct, PlonkCalldataStruct, ProvingSystemType } from "../../types";
 
 import { terminateCurve } from "../../utils";
 
