@@ -1,14 +1,22 @@
 import fs from "fs";
 import path from "path";
-import * as os from "os";
 import * as snarkjs from "snarkjs";
 import { createHash } from "crypto";
 
-import { ArtifactsFileType, CircuitZKitConfig, VerifierLanguageType } from "../types/circuit-zkit";
-import { Signals } from "../types/proof-utils";
-import { CalldataByProtocol, IProtocolImplementer, ProofStructByProtocol, ProvingSystemType } from "../types/protocols";
+import {
+  ArtifactsFileType,
+  CircuitZKitConfig,
+  VerifierLanguageType,
+  Signals,
+  CalldataByProtocol,
+  IProtocolImplementer,
+  ProofStructByProtocol,
+  ProvingSystemType,
+  NumberLike,
+} from "../types";
 
 import { MAX_FILE_NAME_LENGTH } from "../constants";
+import { getTmpDir, modifyWitnessArray, checkWitnessOverrides, writeWitnessFile } from "../utils";
 
 /**
  * `CircuitZKit` represents a single circuit and provides a high-level API to work with it.
@@ -50,30 +58,38 @@ export class CircuitZKit<Type extends ProvingSystemType> {
 
     const verifierFilePath = path.join(this._config.verifierDirPath, verifierFileName);
 
-    this._implementer.createVerifier(vKeyFilePath, verifierFilePath, languageExtension);
+    await this._implementer.createVerifier(vKeyFilePath, verifierFilePath, languageExtension);
   }
 
   /**
    * Calculates a witness for the given inputs.
    *
+   * If `witnessOverrides` are provided, the corresponding witness values will be substituted in the result.
+   *
+   * Signal names in `witnessOverrides` must be provided in their full form as represented in the `.sym` file, e.g.,
+   * `main.signal`, `main.component.signal`, or `main.component.signal[n][m]`.
+   *
    * @param {Signals} inputs - The inputs for the circuit.
+   * @param {Record<string, bigint>} [witnessOverrides] - Optional map of signal names to override their witness values.
    * @returns {Promise<bigint[]>} The generated witness.
    */
-  public async calculateWitness(inputs: Signals): Promise<bigint[]> {
-    const tmpDir = path.join(os.tmpdir(), ".zkit");
-
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-
-    const wtnsFile = path.join(tmpDir, `${this.getCircuitName()}.wtns`);
+  public async calculateWitness(inputs: Signals, witnessOverrides?: Record<string, bigint>): Promise<bigint[]> {
+    const wtnsFile = this.getTemporaryWitnessPath();
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
+
+    let signalIndexes: Record<string, NumberLike> = {};
+
+    if (witnessOverrides) {
+      const symFile = this.mustGetArtifactsFilePath("sym");
+
+      signalIndexes = await checkWitnessOverrides(symFile, witnessOverrides);
+    }
 
     await snarkjs.wtns.calculate(inputs, wasmFile, wtnsFile);
 
-    const wtnsJson = await snarkjs.wtns.exportJson(wtnsFile);
+    const wtnsJson = (await snarkjs.wtns.exportJson(wtnsFile)) as bigint[];
 
-    return wtnsJson as bigint[];
+    return witnessOverrides ? modifyWitnessArray(wtnsJson, signalIndexes, witnessOverrides) : wtnsJson;
   }
 
   /**
@@ -81,15 +97,40 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    *
    * @dev The `inputs` should be in the same order as the circuit expects them.
    *
+   * If `witnessOverrides` are provided, the witness will be calculated from the inputs and overridden accordingly.
+   * Otherwise, a standard witness will be calculated and used.
+   *
+   * Signal names in `witnessOverrides` must be provided in their full form as represented in the `.sym` file, e.g.,
+   * `main.signal`, `main.component.signal`, or `main.component.signal[n][m]`.
+   *
    * @param {Signals} inputs - The inputs for the circuit.
+   * @param {Record<string, bigint>} [witnessOverrides] - Optional map of signal names to override their witness values.
    * @returns {Promise<ProofStructByProtocol<Type>>} The generated proof.
-   * @todo Add support for other proving systems.
    */
-  public async generateProof(inputs: Signals): Promise<ProofStructByProtocol<Type>> {
+  public async generateProof(
+    inputs: Signals,
+    witnessOverrides?: Record<string, bigint>,
+  ): Promise<ProofStructByProtocol<Type>> {
     const zKeyFile = this.mustGetArtifactsFilePath("zkey");
-    const wasmFile = this.mustGetArtifactsFilePath("wasm");
+    const witnessFile = this.getTemporaryWitnessPath();
 
-    return await this._implementer.generateProof(inputs, zKeyFile, wasmFile);
+    let proof: ProofStructByProtocol<Type>;
+
+    try {
+      const witness = await this.calculateWitness(inputs, witnessOverrides);
+
+      if (witnessOverrides) {
+        await writeWitnessFile(witnessFile, witness);
+      }
+
+      proof = await this._implementer.generateProof(zKeyFile, witnessFile);
+    } finally {
+      if (fs.existsSync(witnessFile)) {
+        fs.rmSync(witnessFile);
+      }
+    }
+
+    return proof;
   }
 
   /**
@@ -112,7 +153,6 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    *
    * @param {ProofStructByProtocol<Type>} proof - The proof to generate calldata for.
    * @returns {Promise<CalldataByProtocol<Type>>} - The generated calldata.
-   * @todo Add other types of calldata.
    */
   public async generateCalldata(proof: ProofStructByProtocol<Type>): Promise<CalldataByProtocol<Type>> {
     return await this._implementer.generateCalldata(proof);
@@ -155,6 +195,18 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    */
   public getVerifierTemplate(languageExtension: VerifierLanguageType): string {
     return this._implementer.getTemplate(languageExtension);
+  }
+
+  /**
+   * Returns the path to the temporary witness file.
+   *
+   * The file is stored in the system temporary directory and is named after the circuit.
+   * This file is used for intermediate witness generation and may be deleted after usage.
+   *
+   * @returns {string} The full path to the temporary `.wtns` file.
+   */
+  public getTemporaryWitnessPath(): string {
+    return path.join(getTmpDir(), `${this.getCircuitName()}.wtns`);
   }
 
   /**

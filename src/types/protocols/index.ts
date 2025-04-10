@@ -1,7 +1,6 @@
 import { Groth16ProofStruct, Groth16CalldataStruct } from "./groth16";
 import { PlonkProofStruct, PlonkCalldataStruct } from "./plonk";
 
-import { Signals } from "../proof-utils";
 import { VerifierLanguageType } from "../circuit-zkit";
 
 export * from "./groth16";
@@ -14,7 +13,7 @@ export interface IProtocolImplementer<T extends ProvingSystemType> {
     languageExtension: VerifierLanguageType,
   ): Promise<void>;
 
-  generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<ProofStructByProtocol<T>>;
+  generateProof(zKeyFilePath: string, witnessFilePath: string): Promise<ProofStructByProtocol<T>>;
 
   verifyProof(proof: ProofStructByProtocol<T>, vKeyFilePath: string): Promise<boolean>;
 
