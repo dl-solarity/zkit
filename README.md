@@ -62,18 +62,22 @@ await circuit.createVerifier("sol");
 await circuit.createVerifier("sol", "_suffix_");
 ```
 
-- **`async calculateWitness(inputs) -> bigint[]`**
+- **`async calculateWitness(inputs, witnessOverrides?) -> bigint[]`**
 
 Calculates a witness in the `tmp` directory and returns its json representation.
+An optional `witnessOverrides` parameter can be provided to replace specific signal values in the generated witness file.
 
 ```typescript
 /// witness = [1n, 200n, 20n, 10n]
 const witness = await circuit.calculateWitness({ a: 10, b: 20 });
+
+/// witness = [1n, 200n, 35n, 10n]
+const witness = await circuit.calculateWitness({ a: 10, b: 20 }, {"main.a": 35});
 ```
 
-- **`async generateProof(inputs) -> proof`**
+- **`async generateProof(inputs, witnessOverrides?) -> proof`**
 
-Generates a proof for the given inputs.
+Generates a proof for the given `inputs` and `witnessOverrides`.
 
 ```typescript
 /// { proof: { pi_a, pi_b, pi_c, protocol, curve }, publicSignals: [6] }
