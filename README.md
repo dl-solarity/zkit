@@ -72,7 +72,7 @@ An optional `witnessOverrides` parameter can be provided to replace specific sig
 const witness = await circuit.calculateWitness({ a: 10, b: 20 });
 
 /// witness = [1n, 200n, 35n, 10n]
-const witness = await circuit.calculateWitness({ a: 10, b: 20 }, {"main.a": 35});
+const witness = await circuit.calculateWitness({ a: 10, b: 20 }, { "main.a": 35 });
 ```
 
 - **`async generateProof(inputs, witnessOverrides?) -> proof`**
