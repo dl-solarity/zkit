@@ -9,6 +9,7 @@
 - Leverage `groth16` and `plonk` proving systems.
 - Render optimized Solidity | Vyper verifiers.
 - Build and work with ZK witnesses.
+- Substitute witness signals for advanced circuits testing.
 
 ## Installation
 
