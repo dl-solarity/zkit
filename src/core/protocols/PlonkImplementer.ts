@@ -3,18 +3,17 @@ import * as snarkjs from "snarkjs";
 
 import { AbstractProtocolImplementer } from "./AbstractImplementer";
 
-import { Signals } from "../../types/proof-utils";
-import { PlonkProofStruct, PlonkCalldataStruct, ProvingSystemType } from "../../types/protocols";
+import { PlonkProofStruct, PlonkCalldataStruct, ProvingSystemType } from "../../types";
 
 import { terminateCurve } from "../../utils";
 
 export class PlonkImplementer extends AbstractProtocolImplementer<"plonk"> {
-  public async generateProof(inputs: Signals, zKeyFilePath: string, wasmFilePath: string): Promise<PlonkProofStruct> {
-    const fullProof = await snarkjs.plonk.fullProve(inputs, wasmFilePath, zKeyFilePath);
+  public async generateProof(zKeyFilePath: string, witnessFilePath: string): Promise<PlonkProofStruct> {
+    const proof = await snarkjs.plonk.prove(zKeyFilePath, witnessFilePath);
 
     await terminateCurve();
 
-    return fullProof as PlonkProofStruct;
+    return proof as PlonkProofStruct;
   }
 
   public async verifyProof(proof: PlonkProofStruct, vKeyFilePath: string): Promise<boolean> {
