@@ -1,5 +1,6 @@
 [![npm](https://img.shields.io/npm/v/@solarity/zkit.svg)](https://www.npmjs.com/package/@solarity/zkit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://github.com/dl-solarity/zkit/actions/workflows/tests.yml/badge.svg)](https://github.com/dl-solarity/zkit/actions/workflows/tests.yml)
 
 # ZKit - Circom Zero Knowledge Kit
 
