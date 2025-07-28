@@ -8,12 +8,19 @@ import { PlonkProofStruct, PlonkCalldataStruct, ProvingSystemType } from "../../
 import { terminateCurve } from "../../utils";
 
 export class PlonkImplementer extends AbstractProtocolImplementer<"plonk"> {
-  public async generateProof(zKeyFilePath: string, witnessFilePath: string): Promise<PlonkProofStruct> {
-    const proof = await snarkjs.plonk.prove(zKeyFilePath, witnessFilePath);
+  public async generateProof(
+    zKeyFilePath: string,
+    witnessFilePath: string,
+    timeout: number = 30000,
+  ): Promise<PlonkProofStruct> {
+    const generate = async () => {
+      const proof = await snarkjs.plonk.prove(zKeyFilePath, witnessFilePath);
 
-    await terminateCurve();
+      await terminateCurve();
 
-    return proof as PlonkProofStruct;
+      return proof as PlonkProofStruct;
+    };
+    return await this.withTimeout(generate(), timeout);
   }
 
   public async verifyProof(proof: PlonkProofStruct, vKeyFilePath: string): Promise<boolean> {
