@@ -69,6 +69,8 @@ export interface ShortTestPlonkVerifierType {
 }
 
 describe("CircuitZKit", () => {
+  const SCALAR_FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
   function getArtifactsFullPath(circuitDirSourceName: string): string {
     return path.join(process.cwd(), "zkit", "artifacts", circuitDirSourceName);
   }
@@ -310,6 +312,41 @@ describe("CircuitZKit", () => {
         .to.be.true;
     });
 
+    it("should correctly create Solidity verifier and not verify invalid 'groth16' proof", async function () {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit = getCircuitZKit<"groth16">(circuitName, "groth16", {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
+
+      await multiplierCircuit.createVerifier("sol");
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true, force: true });
+
+      const proof = await multiplierCircuit.generateProof({
+        a: 10,
+        b: 20,
+      });
+
+      proof.publicSignals[0] = (BigInt(proof.publicSignals[0]) + SCALAR_FIELD_SIZE).toString();
+
+      const data = await multiplierCircuit.generateCalldata(proof);
+
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierGroth16Verifier");
+
+      const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(data.proofPoints.a, data.proofPoints.b, data.proofPoints.c, data.publicSignals))
+        .to.be.false;
+    });
+
     it("should correctly create Solidity verifier and verify 'plonk' proof", async function () {
       const circuitName = "Multiplier";
       const verifierDirPath = getVerifiersDirFullPath();
@@ -342,6 +379,40 @@ describe("CircuitZKit", () => {
       const verifier = await MultiplierVerifierFactory.deploy();
 
       expect(await verifier.verifyProof(data.proofPoints.proofData, data.publicSignals)).to.be.true;
+    });
+
+    it("should correctly create Solidity verifier and not verify invalid 'plonk' proof", async function () {
+      const circuitName = "Multiplier";
+      const verifierDirPath = getVerifiersDirFullPath();
+      const artifactsDirFullPath = getArtifactsFullPath(`${circuitName}.circom`);
+
+      const multiplierCircuit = getCircuitZKit<"plonk">(circuitName, "plonk", {
+        circuitName,
+        circuitArtifactsPath: artifactsDirFullPath,
+        verifierDirPath,
+      });
+
+      const expectedVerifierFilePath = path.join(verifierDirPath, `${multiplierCircuit.getVerifierName()}.sol`);
+
+      await multiplierCircuit.createVerifier("sol");
+      expect(fs.existsSync(expectedVerifierFilePath)).to.be.true;
+
+      await this.hre.run("compile", { quiet: true });
+
+      const proof = await multiplierCircuit.generateProof({
+        a: 10,
+        b: 20,
+      });
+
+      proof.publicSignals[0] = (BigInt(proof.publicSignals[0]) + SCALAR_FIELD_SIZE).toString();
+
+      const data = await multiplierCircuit.generateCalldata(proof);
+
+      const MultiplierVerifierFactory = await this.hre.ethers.getContractFactory("MultiplierPlonkVerifier");
+
+      const verifier = await MultiplierVerifierFactory.deploy();
+
+      expect(await verifier.verifyProof(data.proofPoints.proofData, data.publicSignals)).to.be.false;
     });
 
     it("should correctly create Vyper verifier and verify 'groth16' proof", async function () {
