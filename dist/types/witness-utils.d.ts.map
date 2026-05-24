@@ -1,0 +1,1 @@
+{"version":3,"file":"witness-utils.d.ts","sourceRoot":"","sources":["../../src/types/witness-utils.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,MAAM,eAAe,CAAC;AAE3C,MAAM,MAAM,UAAU,GAAG;IACvB,EAAE,EAAE,UAAU,CAAC;IACf,YAAY,EAAE,UAAU,CAAC;IACzB,WAAW,EAAE,UAAU,CAAC;IACxB,UAAU,EAAE,MAAM,CAAC;CACpB,CAAC"}

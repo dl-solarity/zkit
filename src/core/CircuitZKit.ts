@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import * as snarkjs from "snarkjs";
 import { createHash } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 import {
   ArtifactsFileType,
@@ -71,10 +72,15 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    *
    * @param {Signals} inputs - The inputs for the circuit.
    * @param {Record<string, bigint>} [witnessOverrides] - Optional map of signal names to override their witness values.
+   * @param {string} witnessFilePath - The inputs for the witness file path.
    * @returns {Promise<bigint[]>} The generated witness.
    */
-  public async calculateWitness(inputs: Signals, witnessOverrides?: Record<string, bigint>): Promise<bigint[]> {
-    const wtnsFile = this.getTemporaryWitnessPath();
+  public async calculateWitness(
+    inputs: Signals,
+    witnessOverrides?: Record<string, bigint>,
+    witnessFilePath?: string,
+  ): Promise<bigint[]> {
+    const wtnsFile = witnessFilePath ?? this.getTemporaryWitnessPath();
     const wasmFile = this.mustGetArtifactsFilePath("wasm");
 
     let signalIndexes: Record<string, NumberLike> = {};
@@ -105,19 +111,21 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    *
    * @param {Signals} inputs - The inputs for the circuit.
    * @param {Record<string, bigint>} [witnessOverrides] - Optional map of signal names to override their witness values.
+   * @param {boolean} uniqueWitnessPath - The flag for unique witness path to avoid I/O concurrent conflicts. default - false
    * @returns {Promise<ProofStructByProtocol<Type>>} The generated proof.
    */
   public async generateProof(
     inputs: Signals,
     witnessOverrides?: Record<string, bigint>,
+    uniqueWitnessPath: boolean = false,
   ): Promise<ProofStructByProtocol<Type>> {
     const zKeyFile = this.mustGetArtifactsFilePath("zkey");
-    const witnessFile = this.getTemporaryWitnessPath();
+    const witnessFile = uniqueWitnessPath ? this.getTemporaryUniqueWitnessPath() : this.getTemporaryWitnessPath();
 
     let proof: ProofStructByProtocol<Type>;
 
     try {
-      const witness = await this.calculateWitness(inputs, witnessOverrides);
+      const witness = await this.calculateWitness(inputs, witnessOverrides, witnessFile);
 
       if (witnessOverrides) {
         await writeWitnessFile(witnessFile, witness);
@@ -207,6 +215,18 @@ export class CircuitZKit<Type extends ProvingSystemType> {
    */
   public getTemporaryWitnessPath(): string {
     return path.join(getTmpDir(), `${this.getCircuitName()}.wtns`);
+  }
+
+  /**
+   * Returns the path to the temporary witness file with uniqueness.
+   *
+   * The file is stored in the system temporary directory and is named after the circuit with uniqueness.
+   * This file is used for intermediate witness generation and may be deleted after usage.
+   *
+   * @returns {string} The full path to the temporary `.wtns` file.
+   */
+  public getTemporaryUniqueWitnessPath(): string {
+    return path.join(getTmpDir(), `${this.getCircuitName()}-${uuidv4()}.wtns`);
   }
 
   /**

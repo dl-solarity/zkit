@@ -59,4 +59,19 @@ export abstract class AbstractProtocolImplementer<T extends ProvingSystemType> i
   public getVKeyFileName(circuitName: string): string {
     return `${circuitName}.${this.getProvingSystemType()}.vkey.json`;
   }
+
+  protected async withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const id = setTimeout(() => reject(new Error("Operation timed out")), ms);
+      promise
+        .then((res) => {
+          clearTimeout(id);
+          resolve(res);
+        })
+        .catch((err) => {
+          clearTimeout(id);
+          reject(err);
+        });
+    });
+  }
 }

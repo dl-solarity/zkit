@@ -8,12 +8,19 @@ import { Groth16ProofStruct, Groth16CalldataStruct, ProvingSystemType } from "..
 import { terminateCurve } from "../../utils";
 
 export class Groth16Implementer extends AbstractProtocolImplementer<"groth16"> {
-  public async generateProof(zKeyFilePath: string, witnessFilePath: string): Promise<Groth16ProofStruct> {
-    const proof = await snarkjs.groth16.prove(zKeyFilePath, witnessFilePath);
+  public async generateProof(
+    zKeyFilePath: string,
+    witnessFilePath: string,
+    timeout: number = 30000,
+  ): Promise<Groth16ProofStruct> {
+    const generate = async () => {
+      const proof = await snarkjs.groth16.prove(zKeyFilePath, witnessFilePath);
 
-    await terminateCurve();
+      await terminateCurve();
 
-    return proof as Groth16ProofStruct;
+      return proof as Groth16ProofStruct;
+    };
+    return await this.withTimeout(generate(), timeout);
   }
 
   public async verifyProof(proof: Groth16ProofStruct, vKeyFilePath: string): Promise<boolean> {
